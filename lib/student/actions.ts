@@ -1,0 +1,189 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/server';
+import { requireStudent } from '@/lib/auth/roles';
+import { getStudentCoachId } from '@/lib/db/queries/student';
+import { calculateFoodMacros } from '@/domain/nutrition/calculations';
+import { weightEntrySchema, bodyMeasurementSchema } from '@/domain/progress/schemas';
+import type { ActionState } from '@/lib/auth/action-state';
+import type { MealType } from '@/types/app';
+
+function firstError(issues: { message: string }[]): string {
+  return issues[0]?.message ?? 'Revisa los datos ingresados.';
+}
+
+export interface LogFoodInput {
+  mealType: MealType;
+  notes?: string;
+  items: { foodItemId: string; grams: number }[];
+}
+
+export async function logFood(input: LogFoodInput): Promise<{ error?: string; success?: boolean }> {
+  const student = await requireStudent();
+  if (!input.items || input.items.length === 0) return { error: 'Agrega al menos un alimento.' };
+
+  const supabase = await createClient();
+  const ids = input.items.map((i) => i.foodItemId);
+  const { data: foods } = await supabase
+    .from('food_items')
+    .select('id, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g')
+    .in('id', ids);
+  const foodMap = new Map((foods ?? []).map((f) => [f.id, f]));
+
+  const coachId = await getStudentCoachId(student.id);
+  const { data: log, error: logErr } = await supabase
+    .from('food_logs')
+    .insert({
+      student_id: student.id,
+      coach_id: coachId,
+      meal_type: input.mealType,
+      logged_at: new Date().toISOString(),
+      notes: input.notes ?? null,
+    })
+    .select('id')
+    .single();
+  if (logErr || !log) return { error: logErr?.message ?? 'No se pudo guardar el registro.' };
+
+  const rows = input.items.flatMap((item) => {
+    const food = foodMap.get(item.foodItemId);
+    if (!food) return [];
+    const macros = calculateFoodMacros(food, item.grams);
+    return [
+      {
+        food_log_id: log.id,
+        food_item_id: item.foodItemId,
+        grams: item.grams,
+        calories: macros.calories,
+        protein_g: macros.protein_g,
+        carbs_g: macros.carbs_g,
+        fat_g: macros.fat_g,
+      },
+    ];
+  });
+  if (rows.length > 0) await supabase.from('food_log_items').insert(rows);
+
+  revalidatePath('/student/today');
+  revalidatePath('/student/meals');
+  return { success: true };
+}
+
+export interface LogWorkoutInput {
+  workoutPlanId?: string | null;
+  notes?: string;
+  perceivedEffort?: number | null;
+  sets: { exerciseId?: string | null; setNumber: number; reps?: number | null; weight?: number | null; completed: boolean }[];
+}
+
+export async function logWorkout(input: LogWorkoutInput): Promise<{ error?: string; success?: boolean }> {
+  const student = await requireStudent();
+  const supabase = await createClient();
+  const coachId = await getStudentCoachId(student.id);
+
+  const { data: log, error: logErr } = await supabase
+    .from('workout_logs')
+    .insert({
+      student_id: student.id,
+      coach_id: coachId,
+      workout_plan_id: input.workoutPlanId ?? null,
+      status: 'completed',
+      logged_at: new Date().toISOString(),
+      perceived_effort: input.perceivedEffort ?? null,
+      notes: input.notes ?? null,
+    })
+    .select('id')
+    .single();
+  if (logErr || !log) return { error: logErr?.message ?? 'No se pudo guardar el entrenamiento.' };
+
+  const rows = (input.sets ?? []).map((s) => ({
+    workout_log_id: log.id,
+    exercise_id: s.exerciseId ?? null,
+    set_number: s.setNumber,
+    reps_completed: s.reps ?? null,
+    weight_kg: s.weight ?? null,
+    completed: s.completed,
+  }));
+  if (rows.length > 0) await supabase.from('workout_log_sets').insert(rows);
+
+  revalidatePath('/student/workout');
+  revalidatePath('/student/today');
+  return { success: true };
+}
+
+export async function addWeight(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const student = await requireStudent();
+  const parsed = weightEntrySchema.safeParse({
+    weight_kg: formData.get('weight_kg'),
+    recorded_at: formData.get('recorded_at'),
+    notes: formData.get('notes') || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  const supabase = await createClient();
+  const coachId = await getStudentCoachId(student.id);
+  const { error } = await supabase.from('weight_entries').insert({
+    student_id: student.id,
+    coach_id: coachId,
+    weight_kg: parsed.data.weight_kg,
+    recorded_at: parsed.data.recorded_at,
+    notes: parsed.data.notes ?? null,
+  });
+  if (error) return { error: error.message };
+
+  await supabase.from('student_profiles').update({ current_weight_kg: parsed.data.weight_kg }).eq('user_id', student.id);
+  revalidatePath('/student/progress');
+  revalidatePath('/student/today');
+  return { success: 'Peso registrado' };
+}
+
+export async function addMeasurement(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const student = await requireStudent();
+  const parsed = bodyMeasurementSchema.safeParse({
+    recorded_at: formData.get('recorded_at'),
+    waist_cm: formData.get('waist_cm') || undefined,
+    hip_cm: formData.get('hip_cm') || undefined,
+    chest_cm: formData.get('chest_cm') || undefined,
+    thigh_cm: formData.get('thigh_cm') || undefined,
+    arm_cm: formData.get('arm_cm') || undefined,
+    notes: formData.get('notes') || undefined,
+  });
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  const supabase = await createClient();
+  const coachId = await getStudentCoachId(student.id);
+  const { error } = await supabase.from('body_measurements').insert({
+    student_id: student.id,
+    coach_id: coachId,
+    recorded_at: parsed.data.recorded_at,
+    waist_cm: parsed.data.waist_cm ?? null,
+    hip_cm: parsed.data.hip_cm ?? null,
+    chest_cm: parsed.data.chest_cm ?? null,
+    thigh_cm: parsed.data.thigh_cm ?? null,
+    arm_cm: parsed.data.arm_cm ?? null,
+    notes: parsed.data.notes ?? null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath('/student/progress');
+  return { success: 'Medidas registradas' };
+}
+
+export async function markContentRead(assignmentId: string): Promise<void> {
+  await requireStudent();
+  const supabase = await createClient();
+  await supabase.from('content_assignments').update({ read_at: new Date().toISOString() }).eq('id', assignmentId);
+  revalidatePath('/student/content');
+}
+
+export async function updateStudentProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const student = await requireStudent();
+  const fullName = String(formData.get('full_name') ?? '').trim();
+  if (fullName.length < 2) return { error: 'Ingresa tu nombre completo' };
+  const goal = String(formData.get('goal') ?? '').trim() || null;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('profiles').update({ full_name: fullName }).eq('id', student.id);
+  if (error) return { error: error.message };
+  await supabase.from('student_profiles').upsert({ user_id: student.id, goal }, { onConflict: 'user_id' });
+  revalidatePath('/student/profile');
+  return { success: 'Perfil actualizado' };
+}
