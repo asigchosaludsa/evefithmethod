@@ -70,6 +70,34 @@ export default async function StudentProgressPage() {
           )}
         </CardBody>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de medidas</CardTitle>
+        </CardHeader>
+        <CardBody>
+          {!measurements || measurements.length === 0 ? (
+            <EmptyState title="Sin medidas" description="Registra tus primeras medidas arriba." />
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {measurements.map((m) => (
+                <li key={m.id} className="flex items-center justify-between py-2 text-sm">
+                  <span className="text-muted">{formatDate(m.recorded_at)}</span>
+                  <span className="tabular text-foreground">
+                    {[
+                      m.waist_cm && `Cintura ${m.waist_cm}`,
+                      m.hip_cm && `Cadera ${m.hip_cm}`,
+                      m.arm_cm && `Brazo ${m.arm_cm}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }

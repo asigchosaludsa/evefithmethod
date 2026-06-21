@@ -28,7 +28,7 @@ export default function TermsPage() {
       </p>
       <h2>4. Limitación de responsabilidad</h2>
       <p>
-        La plataforma se ofrece "tal cual". En la medida permitida por la ley, EveFit Method no será
+        La plataforma se ofrece «tal cual». En la medida permitida por la ley, EveFit Method no será
         responsable por daños derivados del uso de la información o las herramientas.
       </p>
       <h2>5. Cambios</h2>
