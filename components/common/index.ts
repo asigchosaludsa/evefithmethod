@@ -1,4 +1,5 @@
 export { Button, type ButtonProps } from './Button';
+export { Logo } from './Logo';
 export { SubmitButton } from './SubmitButton';
 export { Label, Input, Textarea, FormField, type FormFieldProps } from './form';
 export { Select, type SelectProps } from './Select';
