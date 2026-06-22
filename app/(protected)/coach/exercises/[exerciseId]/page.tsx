@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { requireCoach } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
-import { archiveExercise } from '@/lib/coach/actions';
-import { Badge, Button, Card, CardBody, CardHeader, CardTitle, PageHeader } from '@/components/common';
+import { Badge, Card, CardBody, CardHeader, CardTitle, PageHeader } from '@/components/common';
+import { ArchiveItemButton } from '@/components/coach/ArchiveItemButton';
 
 export default async function ExerciseDetailPage({
   params,
@@ -28,16 +28,15 @@ export default async function ExerciseDetailPage({
         title={e.name}
         description={[e.muscle_group, e.equipment].filter(Boolean).join(' · ') || undefined}
         actions={
-          canEdit && e.status !== 'archived' ? (
-            <form action={archiveExercise.bind(null, e.id)}>
-              <Button type="submit" variant="outline" size="sm">
-                Archivar
-              </Button>
-            </form>
+          canEdit ? (
+            <ArchiveItemButton id={e.id} kind="exercise" archived={e.status === 'archived'} />
           ) : undefined
         }
       />
-      {e.is_global && <Badge tone="info">Ejercicio global</Badge>}
+      <div className="flex flex-wrap items-center gap-2">
+        {e.is_global && <Badge tone="info">Ejercicio global</Badge>}
+        {e.status === 'archived' && <Badge tone="neutral">Archivado</Badge>}
+      </div>
 
       {e.description && (
         <Card>

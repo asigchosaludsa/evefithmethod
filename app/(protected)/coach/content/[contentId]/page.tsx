@@ -5,6 +5,7 @@ import { requireCoach } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { Badge, PageHeader, SectionHeader } from '@/components/common';
 import { AssignContentForm } from '@/components/coach/AssignContentForm';
+import { ArchiveItemButton } from '@/components/coach/ArchiveItemButton';
 
 export default async function ContentDetailPage({
   params,
@@ -42,7 +43,11 @@ export default async function ContentDetailPage({
       <Link href="/coach/content" className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
         <ArrowLeft className="size-4" /> Contenido
       </Link>
-      <PageHeader title={post.title} description={post.category ?? undefined} />
+      <PageHeader
+        title={post.title}
+        description={post.category ?? undefined}
+        actions={<ArchiveItemButton id={post.id} kind="content" archived={post.status === 'archived'} />}
+      />
       <Badge tone={post.status === 'published' ? 'success' : 'neutral'}>{post.status}</Badge>
       {post.summary && <p className="text-muted">{post.summary}</p>}
       {post.body && (

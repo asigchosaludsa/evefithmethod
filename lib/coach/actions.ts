@@ -86,6 +86,69 @@ export async function resolveAlert(alertId: string): Promise<void> {
   revalidatePath('/coach');
 }
 
+// ---- Student relationship ----
+// "Desvincular" (unlink): reversible removal. Sets the coach<->student link to
+// cancelled so the student leaves the coach's active list and loses access via
+// the relationship, but ALL of the student's data (logs, plans, progress) is
+// preserved. Re-inviting re-links them.
+export async function unlinkStudent(studentId: string): Promise<void> {
+  const coach = await requireCoach();
+  await assertCoachOwnsStudent(coach.id, studentId);
+  const supabase = await createClient();
+  await supabase
+    .from('coach_students')
+    .update({ status: 'cancelled' })
+    .eq('coach_id', coach.id)
+    .eq('student_id', studentId);
+  revalidatePath('/coach/students');
+  redirect('/coach/students');
+}
+
+// ---- Plan archiving (reversible) ----
+export async function archiveNutritionPlan(planId: string, studentId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('nutrition_plans')
+    .update({ status: 'archived' })
+    .eq('id', planId)
+    .eq('coach_id', coach.id);
+  revalidatePath(`/coach/students/${studentId}/nutrition`);
+}
+
+export async function restoreNutritionPlan(planId: string, studentId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('nutrition_plans')
+    .update({ status: 'active' })
+    .eq('id', planId)
+    .eq('coach_id', coach.id);
+  revalidatePath(`/coach/students/${studentId}/nutrition`);
+}
+
+export async function archiveWorkoutPlan(planId: string, studentId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('workout_plans')
+    .update({ status: 'archived' })
+    .eq('id', planId)
+    .eq('coach_id', coach.id);
+  revalidatePath(`/coach/students/${studentId}/workouts`);
+}
+
+export async function restoreWorkoutPlan(planId: string, studentId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('workout_plans')
+    .update({ status: 'active' })
+    .eq('id', planId)
+    .eq('coach_id', coach.id);
+  revalidatePath(`/coach/students/${studentId}/workouts`);
+}
+
 // ---- Nutrition plan ----
 export async function createNutritionPlan(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const coach = await requireCoach();
@@ -188,6 +251,17 @@ export async function archiveExercise(exerciseId: string): Promise<void> {
   await supabase
     .from('exercises')
     .update({ status: 'archived' })
+    .eq('id', exerciseId)
+    .eq('coach_id', coach.id);
+  revalidatePath('/coach/exercises');
+}
+
+export async function restoreExercise(exerciseId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('exercises')
+    .update({ status: 'published' })
     .eq('id', exerciseId)
     .eq('coach_id', coach.id);
   revalidatePath('/coach/exercises');

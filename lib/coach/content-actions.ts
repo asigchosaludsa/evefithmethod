@@ -78,3 +78,27 @@ export async function unassignContent(
     .eq('coach_id', coach.id);
   revalidatePath(`/coach/content/${contentPostId}`);
 }
+
+/** Archive a content post (reversible). Hidden from active lists. */
+export async function archiveContentPost(contentPostId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('content_posts')
+    .update({ status: 'archived' })
+    .eq('id', contentPostId)
+    .eq('coach_id', coach.id);
+  revalidatePath('/coach/content');
+}
+
+/** Restore an archived content post back to published. */
+export async function restoreContentPost(contentPostId: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  await supabase
+    .from('content_posts')
+    .update({ status: 'published' })
+    .eq('id', contentPostId)
+    .eq('coach_id', coach.id);
+  revalidatePath('/coach/content');
+}

@@ -14,6 +14,7 @@ import {
 } from '@/components/common';
 import { CoachNotesPanel } from '@/components/coach/CoachNotesPanel';
 import { AlertManager } from '@/components/coach/AlertManager';
+import { UnlinkStudentButton } from '@/components/coach/UnlinkStudentButton';
 import { formatDate, formatDateTime } from '@/lib/utils/date';
 
 export default async function StudentDetailPage({
@@ -39,6 +40,12 @@ export default async function StudentDetailPage({
       <PageHeader
         title={detail.profile.full_name ?? 'Alumna'}
         description={sp?.goal ?? 'Sin objetivo definido'}
+        actions={
+          <UnlinkStudentButton
+            studentId={studentId}
+            studentName={detail.profile.full_name ?? 'Alumna'}
+          />
+        }
       />
 
       {/* Tabs */}

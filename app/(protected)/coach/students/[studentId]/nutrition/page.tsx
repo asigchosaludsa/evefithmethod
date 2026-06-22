@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { NutritionPlanForm } from '@/components/coach/NutritionPlanForm';
 import { FoodLogReviewList } from '@/components/coach/FoodLogReviewList';
+import { ArchivePlanButton } from '@/components/coach/ArchivePlanButton';
 import { getStudentNutritionDay } from '@/lib/db/queries/student-nutrition';
 import { calculateMacroProgress } from '@/domain/nutrition/calculations';
 import { formatDate, todayISO } from '@/lib/utils/date';
@@ -24,6 +25,8 @@ export default async function StudentNutritionPage({
     getStudentNutritionDay(studentId, todayISO()),
   ]);
   const calProgress = calculateMacroProgress(day.consumed.calories, day.target.calories ?? 0);
+  const activePlans = (plans ?? []).filter((p) => p.status !== 'archived');
+  const archivedPlans = (plans ?? []).filter((p) => p.status === 'archived');
 
   return (
     <div className="space-y-6">
@@ -55,15 +58,18 @@ export default async function StudentNutritionPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3">
           <h2 className="font-display text-lg font-semibold text-foreground">Planes</h2>
-          {!plans || plans.length === 0 ? (
+          {activePlans.length === 0 ? (
             <EmptyState title="Sin planes" description="Crea el primer plan nutricional." />
           ) : (
             <ul className="space-y-2">
-              {plans.map((p) => (
+              {activePlans.map((p) => (
                 <li key={p.id} className="rounded-lg border border-border bg-surface p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-foreground">{p.title}</p>
-                    <Badge tone={p.status === 'active' ? 'success' : 'neutral'}>{p.status}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={p.status === 'active' ? 'success' : 'neutral'}>{p.status}</Badge>
+                      <ArchivePlanButton planId={p.id} studentId={studentId} kind="nutrition" archived={false} />
+                    </div>
                   </div>
                   <p className="mt-1 text-sm text-muted">
                     {p.calories_target ?? '—'} kcal · P {p.protein_target_g ?? '—'} · C {p.carbs_target_g ?? '—'} · G{' '}
@@ -73,6 +79,30 @@ export default async function StudentNutritionPage({
                 </li>
               ))}
             </ul>
+          )}
+
+          {archivedPlans.length > 0 && (
+            <div className="space-y-2 pt-2">
+              <h3 className="text-sm font-semibold text-faint">Archivados</h3>
+              <ul className="space-y-2">
+                {archivedPlans.map((p) => (
+                  <li key={p.id} className="rounded-lg border border-border bg-surface/50 p-4 opacity-70">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-muted">{p.title}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge tone="neutral">{p.status}</Badge>
+                        <ArchivePlanButton planId={p.id} studentId={studentId} kind="nutrition" archived />
+                      </div>
+                    </div>
+                    <p className="mt-1 text-sm text-muted">
+                      {p.calories_target ?? '—'} kcal · P {p.protein_target_g ?? '—'} · C {p.carbs_target_g ?? '—'} · G{' '}
+                      {p.fat_target_g ?? '—'}
+                    </p>
+                    <p className="mt-1 text-xs text-faint">Creado {formatDate(p.created_at)}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
 
