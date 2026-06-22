@@ -5,9 +5,11 @@ import { requireCoach } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { createInvitation } from '@/lib/db/mutations/invitations';
 import { getURL } from '@/lib/utils/url';
+import { sendEmail } from '@/lib/email/send';
+import { invitationEmail } from '@/lib/email/templates';
 
 export type ConvertLeadResult =
-  | { ok: true; link: string; phone: string; email: string }
+  | { ok: true; link: string; phone: string; email: string; emailed: boolean }
   | { ok: false; error: string };
 
 /** Mark a lead as contacted. RLS scopes the update to the owning coach. */
@@ -66,8 +68,12 @@ export async function convertLeadToInvitation(leadId: string): Promise<ConvertLe
       .eq('id', leadId);
     if (updateError) return { ok: false, error: updateError.message };
 
+    // Auto-send the invitation by email (fails soft: WhatsApp/copy still work).
+    const tpl = invitationEmail({ name: lead.full_name, acceptUrl: link });
+    const emailed = await sendEmail({ to: lead.email, subject: tpl.subject, html: tpl.html });
+
     revalidatePath('/coach/solicitudes');
-    return { ok: true, link, phone: lead.phone, email: lead.email };
+    return { ok: true, link, phone: lead.phone, email: lead.email, emailed };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'No se pudo generar la invitación.' };
   }

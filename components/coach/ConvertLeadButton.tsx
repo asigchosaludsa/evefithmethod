@@ -14,6 +14,7 @@ interface Generated {
   link: string;
   phone: string;
   email: string;
+  emailed: boolean;
 }
 
 const WHATSAPP_MESSAGE = 'Hola! Este es tu enlace para registrarte en EveFit Method: ';
@@ -34,7 +35,7 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
     startTransition(async () => {
       const result = await convertLeadToInvitation(leadId);
       if (result.ok) {
-        setGenerated({ link: result.link, phone: result.phone, email: result.email });
+        setGenerated({ link: result.link, phone: result.phone, email: result.email, emailed: result.emailed });
       } else {
         setError(result.error);
       }
@@ -70,7 +71,12 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
 
   return (
     <div className="space-y-2 rounded-md border border-success/25 bg-success/5 p-3">
-      <p className="text-xs font-medium text-success">Invitación generada</p>
+      <p className="text-xs font-medium text-success">
+        {generated.emailed ? 'Invitación enviada por correo ✓' : 'Invitación generada'}
+      </p>
+      {!generated.emailed && (
+        <p className="text-[11px] text-warning">No se pudo enviar el correo automático. Comparte el enlace por WhatsApp o cópialo.</p>
+      )}
       <input
         type="text"
         readOnly
