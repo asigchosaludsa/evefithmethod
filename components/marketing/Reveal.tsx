@@ -22,10 +22,8 @@ export function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setShown(true);
-      return;
-    }
+    // Reduced motion is handled by CSS ([data-reveal] hidden state is gated
+    // behind a no-preference media query), so no special-casing needed here.
     const io = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];

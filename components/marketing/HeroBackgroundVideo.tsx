@@ -14,11 +14,11 @@ export function HeroBackgroundVideo() {
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setShown(true); // static poster only
-      return;
+    // Don't autoplay for reduced-motion users; onCanPlay still reveals the
+    // (paused) first frame so the poster/still shows without motion.
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      v.play().catch(() => {});
     }
-    v.play().catch(() => setShown(true));
   }, []);
 
   return (

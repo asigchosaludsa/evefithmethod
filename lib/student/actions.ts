@@ -70,6 +70,7 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
 
 export interface LogWorkoutInput {
   workoutPlanId?: string | null;
+  workoutPlanDayId?: string | null;
   notes?: string;
   perceivedEffort?: number | null;
   sets: { exerciseId?: string | null; setNumber: number; reps?: number | null; weight?: number | null; completed: boolean }[];
@@ -86,6 +87,7 @@ export async function logWorkout(input: LogWorkoutInput): Promise<{ error?: stri
       student_id: student.id,
       coach_id: coachId,
       workout_plan_id: input.workoutPlanId ?? null,
+      workout_plan_day_id: input.workoutPlanDayId ?? null,
       status: 'completed',
       logged_at: new Date().toISOString(),
       perceived_effort: input.perceivedEffort ?? null,

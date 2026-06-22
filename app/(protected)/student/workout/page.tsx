@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getStudentCoachId } from '@/lib/db/queries/student';
 import { getActiveWorkoutPlanContent } from '@/lib/db/queries/workout-plan';
 import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
+import { GuidedWorkoutLogForm } from '@/components/student/GuidedWorkoutLogForm';
 import { WorkoutLogForm } from '@/components/student/WorkoutLogForm';
 import { formatDateTime } from '@/lib/utils/date';
 
@@ -29,65 +30,32 @@ export default async function StudentWorkoutPage() {
       .limit(5),
   ]);
 
+  const plannedDays = (content?.days ?? []).filter((d) => d.exercises.length > 0);
+  const hasPlan = plannedDays.length > 0;
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Mi entrenamiento" description="Tu plan asignado y registro de hoy." />
+      <PageHeader
+        title="Mi entrenamiento"
+        description={content ? content.plan.title : 'Registra lo que entrenaste.'}
+      />
 
-      {/* Assigned plan */}
-      {content ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{content.plan.title}</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            <p className="text-sm text-muted">
-              {content.plan.focus ?? 'Sesión'} · {content.plan.level ?? 'Todos los niveles'}
-              {content.plan.estimated_duration_minutes ? ` · ${content.plan.estimated_duration_minutes} min` : ''}
-            </p>
-            {content.days.length === 0 ? (
-              <p className="text-sm text-faint">Tu coach está armando los ejercicios de este plan.</p>
-            ) : (
-              <div className="space-y-4">
-                {content.days.map((day) => (
-                  <div key={day.id} className="rounded-md border border-hairline bg-canvas/40 p-3">
-                    <p className="font-display font-semibold text-foreground">
-                      Día {day.day_number}: {day.title}
-                      {day.focus && <span className="ml-2 text-sm font-normal text-muted">· {day.focus}</span>}
-                    </p>
-                    {day.exercises.length === 0 ? (
-                      <p className="mt-1 text-sm text-faint">Sin ejercicios aún.</p>
-                    ) : (
-                      <ul className="mt-2 divide-y divide-hairline">
-                        {day.exercises.map((ex) => (
-                          <li key={ex.id} className="py-2">
-                            <p className="font-medium text-foreground">{ex.exercise_name}</p>
-                            <p className="tabular text-sm text-muted">
-                              {ex.sets} series × {ex.reps} reps
-                              {ex.rest_seconds ? ` · ${ex.rest_seconds}s desc.` : ''}
-                              {ex.suggested_weight_kg ? ` · sugerido ${ex.suggested_weight_kg}kg` : ''}
-                            </p>
-                            {ex.notes && <p className="text-xs text-faint">{ex.notes}</p>}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      ) : (
-        <EmptyState title="Sin plan activo" description="Tu coach asignará tu plan pronto. Puedes registrar igual lo que entrenes." />
-      )}
-
-      {/* Log */}
       <Card>
         <CardHeader>
-          <CardTitle>Registrar entrenamiento</CardTitle>
+          <CardTitle>{hasPlan ? 'Tu sesión de hoy' : 'Registrar entrenamiento'}</CardTitle>
         </CardHeader>
         <CardBody>
-          <WorkoutLogForm exercises={exercises ?? []} workoutPlanId={content?.plan.id ?? null} />
+          {hasPlan ? (
+            <GuidedWorkoutLogForm workoutPlanId={content?.plan.id ?? null} days={plannedDays} />
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-muted">
+                Tu coach aún no asignó ejercicios a tu plan. Puedes registrar igual lo que hayas
+                entrenado.
+              </p>
+              <WorkoutLogForm exercises={exercises ?? []} workoutPlanId={content?.plan.id ?? null} />
+            </>
+          )}
         </CardBody>
       </Card>
 

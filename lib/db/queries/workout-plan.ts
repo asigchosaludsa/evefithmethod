@@ -8,6 +8,7 @@ export interface PlanExerciseRow {
   exercise_id: string | null;
   exercise_name: string;
   muscle_group: string | null;
+  video_url: string | null;
   sort_order: number;
   sets: number;
   reps: string;
@@ -53,7 +54,7 @@ export async function getWorkoutPlanContent(planId: string): Promise<WorkoutPlan
 
   const exerciseIds = [...new Set((planExercises ?? []).map((e) => e.exercise_id).filter(Boolean))] as string[];
   const { data: exercises } = exerciseIds.length
-    ? await supabase.from('exercises').select('id, name, muscle_group').in('id', exerciseIds)
+    ? await supabase.from('exercises').select('id, name, muscle_group, video_url').in('id', exerciseIds)
     : { data: [] };
   const exMap = new Map((exercises ?? []).map((e) => [e.id, e]));
 
@@ -67,6 +68,7 @@ export async function getWorkoutPlanContent(planId: string): Promise<WorkoutPlan
       exercise_id: pe.exercise_id,
       exercise_name: ex?.name ?? 'Ejercicio',
       muscle_group: ex?.muscle_group ?? null,
+      video_url: ex?.video_url ?? null,
       sort_order: pe.sort_order,
       sets: pe.sets,
       reps: pe.reps,

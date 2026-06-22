@@ -10,3 +10,4 @@ export { PageHeader, SectionHeader, type PageHeaderProps } from './PageHeader';
 export { StatCard, type StatCardProps } from './StatCard';
 export { ProgressRing, type ProgressRingProps } from './ProgressRing';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+export { YouTubeEmbed } from './YouTubeEmbed';
