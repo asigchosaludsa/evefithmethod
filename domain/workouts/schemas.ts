@@ -5,6 +5,22 @@ export const workoutPlanSchema = z.object({
   title: z.string().min(1, 'El título es requerido'),
   focus: z.string().max(200).optional(),
   level: z.string().max(100).optional(),
+  split_type: z
+    .enum([
+      'cuerpo_completo',
+      'torso_pierna',
+      'ppl',
+      'ppl_doble',
+      'bro_split',
+      'torso_extremidades',
+      'ppl_ul',
+      'arnold',
+      'phul',
+      'phat',
+      'ppl_arnold',
+      'personalizado',
+    ])
+    .optional(),
   estimated_duration_minutes: z.coerce.number().int().positive().max(600).nullable().optional(),
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
   starts_at: z.string().optional(),

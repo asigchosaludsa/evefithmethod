@@ -34,14 +34,16 @@ export type Equipment = (typeof EQUIPMENT)[number];
 export const DIFFICULTIES = ['principiante', 'intermedio', 'avanzado'] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
 
-export const MOVEMENT_PATTERNS = [
+export const MOVEMENT_PATTERN_VALUES = ['empuje', 'traccion', 'dominante_cadera', 'dominante_rodilla', 'core'] as const;
+export type MovementPattern = (typeof MOVEMENT_PATTERN_VALUES)[number];
+
+export const MOVEMENT_PATTERNS: { value: MovementPattern; label: string }[] = [
   { value: 'empuje', label: 'Empuje' },
   { value: 'traccion', label: 'Tracción' },
   { value: 'dominante_cadera', label: 'Dominante de cadera' },
   { value: 'dominante_rodilla', label: 'Dominante de rodilla' },
   { value: 'core', label: 'Core' },
-] as const;
-export type MovementPattern = (typeof MOVEMENT_PATTERNS)[number]['value'];
+];
 
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
   principiante: 'Principiante',
