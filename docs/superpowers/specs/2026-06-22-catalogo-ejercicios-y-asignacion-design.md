@@ -33,6 +33,15 @@ golpe** y, recién después, configurar series/reps/peso de cada uno y añadirlo
 **Fuera de alcance v1:** subida masiva de imágenes (se suben una a una), reordenar ejercicios por
 drag-and-drop.
 
+### 2.1 Splits de entrenamiento (añadido)
+
+Al **crear un plan**, la coach elige un **split**. El split genera automáticamente los **días** del
+plan con su título y enfoque; luego la coach rellena cada día con el catálogo. El **alumno ve el
+split y la estructura** en su parte de entrenamiento. El enfoque de cada día **pre-marca los
+filtros** del catálogo al añadir ejercicios. Todo en español.
+
+Pre-filtro confirmado: **sí**.
+
 ---
 
 ## 3. Modelo de datos
@@ -77,6 +86,54 @@ aterrice de forma fiable en producción. Cobertura repartida por los 12 grupos m
 > coach sube fotos reales cuando quiera desde el editor de ejercicio.
 
 ---
+
+## 3.4 Splits — modelo de datos
+
+- Migración `0011`: `alter table public.workout_plans add column split_type text` con CHECK en los
+  valores canónicos: `cuerpo_completo`, `torso_pierna`, `ppl`, `ppl_doble`, `bro_split`,
+  `torso_extremidades`, `ppl_ul`, `arnold`, `phul`, `phat`, `ppl_arnold`, `personalizado`
+  (nullable; los planes existentes quedan `NULL` = sin split asignado).
+- **No** se añade tabla nueva para los días del split: se reutiliza `workout_plan_days`. El split es
+  solo una **plantilla** que decide qué filas de `workout_plan_days` se crean al generar el plan.
+
+### Plantillas de split (constante TS)
+
+Nuevo archivo `lib/constants/splits.ts` con `SPLIT_TEMPLATES`: por cada split, `{ key, label,
+english, days: [{ title, focus, muscleGroups[] }] }`. `muscleGroups` usa los valores canónicos de
+grupo muscular (sección 3.1) y alimenta el pre-filtro del catálogo.
+
+| key | label (ES) | días |
+|---|---|---|
+| `cuerpo_completo` | Cuerpo completo | 3 (cuerpo completo ×3) |
+| `torso_pierna` | Torso / Pierna | 4 (Torso, Pierna, Torso, Pierna) |
+| `ppl` | Empuje / Tracción / Pierna | 3 (Empuje, Tracción, Pierna) |
+| `ppl_doble` | PPL doble | 6 (Empuje, Tracción, Pierna ×2) |
+| `bro_split` | Por grupo muscular | 5 (Pecho, Espalda, Pierna, Hombros, Brazos) |
+| `torso_extremidades` | Torso / Extremidades | 4 (Torso, Extremidades, Torso, Extremidades) |
+| `ppl_ul` | PPL + Torso/Pierna | 5 (Empuje, Tracción, Pierna, Torso, Pierna) |
+| `arnold` | Arnold | 6 (Pecho y Espalda, Hombros y Brazos, Pierna ×2) |
+| `phul` | Fuerza-Hipertrofia T/P (PHUL) | 4 (Torso fuerza, Pierna fuerza, Torso hiper., Pierna hiper.) |
+| `phat` | Powerbuilding (PHAT) | 5 (Torso fuerza, Pierna fuerza, Espalda/Hombros hiper., Pierna hiper., Pecho/Brazos hiper.) |
+| `ppl_arnold` | PPL + Arnold | 6 (Empuje, Tracción, Pierna, Pecho y Espalda, Hombros y Brazos, Pierna) |
+| `personalizado` | Personalizado | N días que define la coach manualmente |
+
+> Las composiciones siguen las referencias estándar (Hevy, StrengthLog, Legion, Boostcamp).
+
+### Flujo de creación con split
+
+- `WorkoutPlanForm` gana un selector de **split** (tarjetas/lista con nombre, equivalente en
+  inglés y nº de días). Al crear:
+  - Split ≠ `personalizado`: la action `createWorkoutPlan` guarda `split_type` y **genera los
+    `workout_plan_days`** desde la plantilla (título + focus, `day_number` correlativo).
+  - Split = `personalizado`: guarda `split_type='personalizado'` y **no** crea días; la coach los
+    añade con el flujo manual actual (`addWorkoutDay`).
+- En el constructor del plan, cada día muestra su enfoque; el botón "+ Añadir ejercicios" abre el
+  catálogo con los filtros **pre-marcados** según `muscleGroups` del día (la coach puede quitarlos).
+
+### Visibilidad para el alumno
+
+- `lib/db/queries/workout-plan.ts` expone `split_type`. La vista `app/(protected)/student/workout`
+  muestra una etiqueta legible del split (vía `SPLIT_TEMPLATES[key].label`) y la estructura de días.
 
 ## 4. Capa de dominio (`/domain/exercises/`, Vitest)
 
@@ -126,6 +183,10 @@ Diseño "Acero & Escarlata" (escarlata `#FF3B47`, acero oscuro). Reutiliza estil
 La validación se centraliza: extraer el esquema por-ítem a `domain/workouts/schemas.ts` o
 `lib/validators/coach.ts` y reutilizarlo en singular, plural y update.
 
+- **`createWorkoutPlan`** (modificada) — `workoutPlanSchema` añade `split_type` (`z.enum` de los 12
+  valores, opcional). Tras insertar el plan, si `split_type` ≠ `personalizado` y ≠ vacío, genera en
+  lote los `workout_plan_days` desde `SPLIT_TEMPLATES`. Mantiene las guardas actuales.
+
 ---
 
 ## 7. Editor de ejercicios y biblioteca
@@ -162,22 +223,28 @@ La validación se centraliza: extraer el esquema por-ítem a `domain/workouts/sc
 ## 9. Archivos afectados (resumen)
 
 **Nuevos:**
-- `supabase/migrations/0011_exercise_catalog.sql`
+- `supabase/migrations/0011_exercise_catalog.sql` (columnas ejercicio + `split_type` + bucket)
 - `supabase/migrations/0012_exercise_catalog_seed.sql`
 - `lib/constants/exercises.ts`
+- `lib/constants/splits.ts` (`SPLIT_TEMPLATES`)
 - `domain/exercises/filter.ts` + `domain/exercises/filter.test.ts` (+ `constants.ts`)
+- `domain/workouts/splits.ts` + `splits.test.ts` (resolver plantilla → días; función pura)
 - `components/coach/ExerciseCatalogPicker.tsx`
-- `app/(protected)/coach/exercises/[exerciseId]/edit/page.tsx` (si se confirma edición)
+- `app/(protected)/coach/exercises/[exerciseId]/edit/page.tsx`
 
 **Modificados:**
 - `supabase/migrations` (solo añadidos; los existentes no se tocan)
-- `lib/coach/actions.ts` (+`addPlanExercises`, +`updatePlanExercise`, +`updateExercise`)
-- `lib/validators/coach.ts` (`exerciseSchema` con enums + nuevas categorías; esquema por-ítem)
+- `lib/coach/actions.ts` (+`addPlanExercises`, +`updatePlanExercise`, +`updateExercise`;
+  `createWorkoutPlan` genera días desde el split)
+- `lib/validators/coach.ts` (`exerciseSchema` con enums + categorías; esquema por-ítem)
+- `domain/workouts/schemas.ts` (`workoutPlanSchema` + `split_type`)
 - `components/coach/ExerciseForm.tsx` (selects + subida de imagen)
+- `components/coach/WorkoutPlanForm.tsx` (selector de split)
 - `components/coach/AddPlanExerciseForm.tsx` (reemplazado/complementado por el botón del picker)
-- `app/(protected)/coach/workouts/plans/[planId]/page.tsx` (integrar picker + edición inline)
+- `app/(protected)/coach/workouts/plans/[planId]/page.tsx` (integrar picker + edición inline + pre-filtro)
 - `app/(protected)/coach/exercises/page.tsx` (filtros + tarjetas)
-- `lib/db/queries/workout-plan.ts` (exponer categorías de ejercicio si hace falta en las tarjetas)
+- `app/(protected)/student/workout/page.tsx` (mostrar split + estructura)
+- `lib/db/queries/workout-plan.ts` (exponer categorías de ejercicio y `split_type`)
 
 ---
 
@@ -190,5 +257,9 @@ La validación se centraliza: extraer el esquema por-ítem a `domain/workouts/sc
 3. La coach puede editar inline series/reps/peso de un ejercicio ya añadido.
 4. El editor de ejercicio permite elegir las 4 categorías desde listas fijas y subir una imagen.
 5. La biblioteca `/coach/exercises` se puede filtrar por las 4 categorías y buscar por nombre.
-6. Todo respeta RLS, guardas de coach, validación Zod y el diseño "Acero & Escarlata".
-7. Tests Vitest de `filterExercises` en verde; `npm run typecheck`, `lint`, `build` sin errores.
+6. Al crear un plan, la coach elige uno de los 11 splits (o Personalizado); los días se generan
+   automáticamente con su enfoque (salvo Personalizado). El alumno ve el split y la estructura.
+7. Al añadir ejercicios desde un día con enfoque, los filtros del catálogo vienen pre-marcados.
+8. Todo respeta RLS, guardas de coach, validación Zod y el diseño "Acero & Escarlata".
+9. Tests Vitest de `filterExercises` y de la resolución de splits en verde; `npm run typecheck`,
+   `lint`, `build` sin errores.
