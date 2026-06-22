@@ -22,7 +22,7 @@ export function BrandIcon({ className }: { className?: string }) {
       />
       <path
         d="M12 61 L42 88 L114 23"
-        stroke="#FF3B47"
+        stroke="currentColor"
         strokeWidth="13"
         strokeLinecap="round"
         strokeLinejoin="round"
