@@ -9,16 +9,19 @@ import type {
   AlertSource,
   AlertStatus,
   ContentStatus,
+  Difficulty,
   ExerciseStatus,
   FoodRecommendationType,
   InvitationStatus,
   MealType,
+  MovementPattern,
   PhotoType,
   PhotoVisibility,
   PlanStatus,
   RelationshipStatus,
   ReviewStatus,
   Role,
+  SplitType,
   WorkoutLogStatus,
 } from './app';
 
@@ -304,6 +307,7 @@ type WorkoutPlansRow = {
   title: string;
   focus: string | null;
   level: string | null;
+  split_type: SplitType | null;
   estimated_duration_minutes: number | null;
   status: PlanStatus;
   starts_at: DateString | null;
@@ -318,6 +322,7 @@ type WorkoutPlansInsert = {
   title: string;
   focus?: string | null;
   level?: string | null;
+  split_type?: SplitType | null;
   estimated_duration_minutes?: number | null;
   status?: PlanStatus;
   starts_at?: DateString | null;
@@ -353,6 +358,8 @@ type ExercisesRow = {
   name: string;
   muscle_group: string | null;
   equipment: string | null;
+  difficulty: Difficulty | null;
+  movement_pattern: MovementPattern | null;
   description: string | null;
   instructions: string | null;
   common_mistakes: string | null;
@@ -369,6 +376,8 @@ type ExercisesInsert = {
   name: string;
   muscle_group?: string | null;
   equipment?: string | null;
+  difficulty?: Difficulty | null;
+  movement_pattern?: MovementPattern | null;
   description?: string | null;
   instructions?: string | null;
   common_mistakes?: string | null;

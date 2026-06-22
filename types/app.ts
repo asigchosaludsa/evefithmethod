@@ -28,6 +28,22 @@ export const CONTENT_CATEGORIES = [
 ] as const;
 export type ContentCategory = (typeof CONTENT_CATEGORIES)[number];
 
+export type Difficulty = 'principiante' | 'intermedio' | 'avanzado';
+export type MovementPattern = 'empuje' | 'traccion' | 'dominante_cadera' | 'dominante_rodilla' | 'core';
+export type SplitType =
+  | 'cuerpo_completo'
+  | 'torso_pierna'
+  | 'ppl'
+  | 'ppl_doble'
+  | 'bro_split'
+  | 'torso_extremidades'
+  | 'ppl_ul'
+  | 'arnold'
+  | 'phul'
+  | 'phat'
+  | 'ppl_arnold'
+  | 'personalizado';
+
 /** A nutrition macro tuple used throughout the nutrition domain. */
 export interface Macros {
   calories: number;
