@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Apple, ArrowLeft, Dumbbell, LineChart } from 'lucide-react';
+import { Apple, ArrowLeft, Dumbbell, LineChart, MessageCircle } from 'lucide-react';
 import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
 import { getStudentDetail } from '@/lib/db/queries/student-detail';
+import { createClient } from '@/lib/supabase/server';
+import { renderWhatsapp } from '@/lib/email/render';
 import {
   Badge,
   Button,
@@ -15,7 +17,10 @@ import {
 import { CoachNotesPanel } from '@/components/coach/CoachNotesPanel';
 import { AlertManager } from '@/components/coach/AlertManager';
 import { UnlinkStudentButton } from '@/components/coach/UnlinkStudentButton';
+import { SendPlanButton } from '@/components/coach/SendPlanButton';
 import { formatDate, formatDateTime } from '@/lib/utils/date';
+
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://evefitmethod.com').replace(/\/$/, '');
 
 export default async function StudentDetailPage({
   params,
@@ -30,6 +35,21 @@ export default async function StudentDetailPage({
 
   const sp = detail.studentProfile;
   const lastWeight = detail.weightEntries[0];
+  const studentName = detail.profile.full_name ?? 'Alumna';
+  const firstName = studentName.split(' ')[0];
+
+  // WhatsApp welcome action (server-computed). Renders nothing if disabled.
+  const supabase = await createClient();
+  const { data: studentProfileRow } = await supabase
+    .from('profiles')
+    .select('phone')
+    .eq('id', studentId)
+    .maybeSingle();
+  const phone = studentProfileRow?.phone ?? '';
+  const wa = await renderWhatsapp('wa_welcome', { nombre: firstName, link: `${SITE}/login` });
+  const waHref = wa
+    ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(wa.text)}`
+    : null;
 
   return (
     <div className="space-y-6">
@@ -38,13 +58,20 @@ export default async function StudentDetailPage({
       </Link>
 
       <PageHeader
-        title={detail.profile.full_name ?? 'Alumna'}
+        title={studentName}
         description={sp?.goal ?? 'Sin objetivo definido'}
         actions={
-          <UnlinkStudentButton
-            studentId={studentId}
-            studentName={detail.profile.full_name ?? 'Alumna'}
-          />
+          <div className="flex flex-wrap items-start gap-2">
+            <SendPlanButton studentId={studentId} />
+            {waHref && (
+              <Button asChild variant="outline" size="sm">
+                <a href={waHref} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="size-4" /> Bienvenida por WhatsApp
+                </a>
+              </Button>
+            )}
+            <UnlinkStudentButton studentId={studentId} studentName={studentName} />
+          </div>
         }
       />
 

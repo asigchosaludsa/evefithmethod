@@ -4,7 +4,10 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
+import { sendEmail } from '@/lib/email/send';
+import { renderEmail } from '@/lib/email/render';
 import type { ActionState } from '@/lib/auth/action-state';
 import { coachNoteSchema, contentPostSchema, exerciseSchema } from '@/lib/validators/coach';
 import { nutritionPlanSchema } from '@/domain/nutrition/schemas';
@@ -95,6 +98,38 @@ export async function unlinkStudent(studentId: string): Promise<void> {
   const coach = await requireCoach();
   await assertCoachOwnsStudent(coach.id, studentId);
   const supabase = await createClient();
+
+  // Build a recap and send the "vuelve pronto" email before unlinking
+  // (admin client: reads the student's email/name/stats regardless of RLS).
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', studentId)
+    .maybeSingle();
+  const { data: link } = await admin
+    .from('coach_students')
+    .select('created_at')
+    .eq('coach_id', coach.id)
+    .eq('student_id', studentId)
+    .maybeSingle();
+  const { count: entrenos } = await admin
+    .from('workout_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('student_id', studentId);
+  const semanas = link?.created_at
+    ? Math.max(1, Math.round((Date.now() - new Date(link.created_at).getTime()) / 604_800_000))
+    : 1;
+
+  if (profile?.email) {
+    const tpl = await renderEmail('unlink', {
+      nombre: profile.full_name ?? '',
+      semanas: String(semanas),
+      entrenos: String(entrenos ?? 0),
+    });
+    if (tpl) await sendEmail({ to: profile.email, subject: tpl.subject, html: tpl.html });
+  }
+
   await supabase
     .from('coach_students')
     .update({ status: 'cancelled' })

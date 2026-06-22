@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { verifyTurnstile } from '@/lib/security/turnstile';
+import { sendEmail } from '@/lib/email/send';
+import { renderEmail } from '@/lib/email/render';
 import type { ActionState } from '@/lib/auth/action-state';
 import { leadRequestSchema } from '@/lib/validators/lead';
 
@@ -68,6 +70,18 @@ export async function submitLeadRequest(
     status: 'new',
   });
   if (error) return { error: 'No se pudo enviar tu solicitud. Intenta de nuevo.' };
+
+  // Notify the coach of the new lead (fails soft).
+  const ownerEmail = (process.env.OWNER_EMAIL ?? '').trim();
+  if (ownerEmail) {
+    const tpl = await renderEmail('lead_notification', {
+      nombre: data.full_name,
+      objetivo: data.goal,
+      email: data.email,
+      telefono: data.phone,
+    });
+    if (tpl) await sendEmail({ to: ownerEmail, subject: tpl.subject, html: tpl.html });
+  }
 
   return { success: 'ok' };
 }
