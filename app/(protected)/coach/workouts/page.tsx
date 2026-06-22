@@ -31,7 +31,7 @@ export default async function CoachWorkoutsPage() {
           {plans.map((p) => (
             <li key={p.id}>
               <Link
-                href={`/coach/students/${p.student_id}/workouts`}
+                href={`/coach/workouts/plans/${p.id}`}
                 className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-elevated"
               >
                 <div>

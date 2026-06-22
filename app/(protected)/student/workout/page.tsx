@@ -1,6 +1,7 @@
 import { requireStudent } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { getStudentCoachId } from '@/lib/db/queries/student';
+import { getActiveWorkoutPlanContent } from '@/lib/db/queries/workout-plan';
 import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { WorkoutLogForm } from '@/components/student/WorkoutLogForm';
 import { formatDateTime } from '@/lib/utils/date';
@@ -12,15 +13,8 @@ export default async function StudentWorkoutPage() {
   const supabase = await createClient();
   const coachId = await getStudentCoachId(profile.id);
 
-  const [{ data: plan }, { data: exercises }, { data: recent }] = await Promise.all([
-    supabase
-      .from('workout_plans')
-      .select('*')
-      .eq('student_id', profile.id)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+  const [content, { data: exercises }, { data: recent }] = await Promise.all([
+    getActiveWorkoutPlanContent(profile.id),
     supabase
       .from('exercises')
       .select('id, name')
@@ -29,7 +23,7 @@ export default async function StudentWorkoutPage() {
       .order('name'),
     supabase
       .from('workout_logs')
-      .select('id, logged_at, status, perceived_effort')
+      .select('id, logged_at, perceived_effort')
       .eq('student_id', profile.id)
       .order('logged_at', { ascending: false })
       .limit(5),
@@ -37,30 +31,63 @@ export default async function StudentWorkoutPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mi entrenamiento" description="Tu plan activo y registro de hoy." />
+      <PageHeader title="Mi entrenamiento" description="Tu plan asignado y registro de hoy." />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{plan ? plan.title : 'Sin plan activo'}</CardTitle>
-        </CardHeader>
-        <CardBody>
-          {plan ? (
+      {/* Assigned plan */}
+      {content ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{content.plan.title}</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-4">
             <p className="text-sm text-muted">
-              {plan.focus ?? 'Sesión'} · {plan.level ?? 'Todos los niveles'}
-              {plan.estimated_duration_minutes ? ` · ${plan.estimated_duration_minutes} min` : ''}
+              {content.plan.focus ?? 'Sesión'} · {content.plan.level ?? 'Todos los niveles'}
+              {content.plan.estimated_duration_minutes ? ` · ${content.plan.estimated_duration_minutes} min` : ''}
             </p>
-          ) : (
-            <p className="text-sm text-muted">Tu coach asignará tu plan pronto. Puedes registrar igual lo que entrenes.</p>
-          )}
-        </CardBody>
-      </Card>
+            {content.days.length === 0 ? (
+              <p className="text-sm text-faint">Tu coach está armando los ejercicios de este plan.</p>
+            ) : (
+              <div className="space-y-4">
+                {content.days.map((day) => (
+                  <div key={day.id} className="rounded-md border border-hairline bg-canvas/40 p-3">
+                    <p className="font-display font-semibold text-foreground">
+                      Día {day.day_number}: {day.title}
+                      {day.focus && <span className="ml-2 text-sm font-normal text-muted">· {day.focus}</span>}
+                    </p>
+                    {day.exercises.length === 0 ? (
+                      <p className="mt-1 text-sm text-faint">Sin ejercicios aún.</p>
+                    ) : (
+                      <ul className="mt-2 divide-y divide-hairline">
+                        {day.exercises.map((ex) => (
+                          <li key={ex.id} className="py-2">
+                            <p className="font-medium text-foreground">{ex.exercise_name}</p>
+                            <p className="tabular text-sm text-muted">
+                              {ex.sets} series × {ex.reps} reps
+                              {ex.rest_seconds ? ` · ${ex.rest_seconds}s desc.` : ''}
+                              {ex.suggested_weight_kg ? ` · sugerido ${ex.suggested_weight_kg}kg` : ''}
+                            </p>
+                            {ex.notes && <p className="text-xs text-faint">{ex.notes}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      ) : (
+        <EmptyState title="Sin plan activo" description="Tu coach asignará tu plan pronto. Puedes registrar igual lo que entrenes." />
+      )}
 
+      {/* Log */}
       <Card>
         <CardHeader>
           <CardTitle>Registrar entrenamiento</CardTitle>
         </CardHeader>
         <CardBody>
-          <WorkoutLogForm exercises={exercises ?? []} workoutPlanId={plan?.id ?? null} />
+          <WorkoutLogForm exercises={exercises ?? []} workoutPlanId={content?.plan.id ?? null} />
         </CardBody>
       </Card>
 

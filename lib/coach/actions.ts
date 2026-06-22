@@ -212,3 +212,96 @@ export async function updateCoachSettings(_prev: ActionState, formData: FormData
   revalidatePath('/coach/settings');
   return { success: 'Cambios guardados' };
 }
+
+// ---- Workout plan builder (days + exercises) ----
+export async function addWorkoutDay(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const coach = await requireCoach();
+  const planId = String(formData.get('workout_plan_id') ?? '');
+  const title = String(formData.get('title') ?? '').trim();
+  const focus = String(formData.get('focus') ?? '').trim() || null;
+  if (!planId || title.length < 1) return { error: 'Escribe el título del día' };
+
+  const supabase = await createClient();
+  const { data: plan } = await supabase
+    .from('workout_plans')
+    .select('id, coach_id')
+    .eq('id', planId)
+    .maybeSingle();
+  if (!plan || plan.coach_id !== coach.id) return { error: 'Plan no encontrado' };
+
+  const { data: last } = await supabase
+    .from('workout_plan_days')
+    .select('day_number')
+    .eq('workout_plan_id', planId)
+    .order('day_number', { ascending: false })
+    .limit(1);
+  const nextNumber = (last?.[0]?.day_number ?? 0) + 1;
+
+  const { error } = await supabase
+    .from('workout_plan_days')
+    .insert({ workout_plan_id: planId, day_number: nextNumber, title, focus });
+  if (error) return { error: error.message };
+  revalidatePath(`/coach/workouts/plans/${planId}`);
+  return { success: 'Día agregado' };
+}
+
+export async function deleteWorkoutDay(dayId: string, planId: string): Promise<void> {
+  await requireCoach();
+  const supabase = await createClient();
+  await supabase.from('workout_plan_days').delete().eq('id', dayId);
+  revalidatePath(`/coach/workouts/plans/${planId}`);
+}
+
+export async function addPlanExercise(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const coach = await requireCoach();
+  const dayId = String(formData.get('workout_plan_day_id') ?? '');
+  const planId = String(formData.get('workout_plan_id') ?? '');
+  const exerciseId = String(formData.get('exercise_id') ?? '') || null;
+  if (!dayId || !exerciseId) return { error: 'Selecciona un ejercicio' };
+
+  const supabase = await createClient();
+  const { data: day } = await supabase
+    .from('workout_plan_days')
+    .select('workout_plan_id')
+    .eq('id', dayId)
+    .maybeSingle();
+  if (!day) return { error: 'Día no encontrado' };
+  const { data: plan } = await supabase
+    .from('workout_plans')
+    .select('coach_id')
+    .eq('id', day.workout_plan_id)
+    .maybeSingle();
+  if (!plan || plan.coach_id !== coach.id) return { error: 'No autorizado' };
+
+  const { data: last } = await supabase
+    .from('workout_plan_exercises')
+    .select('sort_order')
+    .eq('workout_plan_day_id', dayId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const sortOrder = (last?.[0]?.sort_order ?? 0) + 1;
+
+  const { error } = await supabase.from('workout_plan_exercises').insert({
+    workout_plan_day_id: dayId,
+    exercise_id: exerciseId,
+    sort_order: sortOrder,
+    sets: Number(formData.get('sets')) || 3,
+    reps: String(formData.get('reps') ?? '10').trim() || '10',
+    rest_seconds: formData.get('rest_seconds') ? Number(formData.get('rest_seconds')) : null,
+    tempo: String(formData.get('tempo') ?? '').trim() || null,
+    suggested_weight_kg: formData.get('suggested_weight_kg')
+      ? Number(formData.get('suggested_weight_kg'))
+      : null,
+    notes: String(formData.get('notes') ?? '').trim() || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath(`/coach/workouts/plans/${planId}`);
+  return { success: 'Ejercicio agregado' };
+}
+
+export async function deletePlanExercise(id: string, planId: string): Promise<void> {
+  await requireCoach();
+  const supabase = await createClient();
+  await supabase.from('workout_plan_exercises').delete().eq('id', id);
+  revalidatePath(`/coach/workouts/plans/${planId}`);
+}
