@@ -9,9 +9,10 @@ import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
 import { sendEmail } from '@/lib/email/send';
 import { renderEmail } from '@/lib/email/render';
 import type { ActionState } from '@/lib/auth/action-state';
-import { coachNoteSchema, contentPostSchema, exerciseSchema } from '@/lib/validators/coach';
+import { coachNoteSchema, contentPostSchema, exerciseSchema, planExerciseItemSchema } from '@/lib/validators/coach';
 import { nutritionPlanSchema } from '@/domain/nutrition/schemas';
 import { workoutPlanSchema } from '@/domain/workouts/schemas';
+import { resolveSplitDays } from '@/domain/workouts/splits';
 
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? 'Revisa los datos ingresados.';
@@ -227,6 +228,7 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
     title: formData.get('title'),
     focus: formData.get('focus') || undefined,
     level: formData.get('level') || undefined,
+    split_type: formData.get('split_type') || undefined,
     estimated_duration_minutes: formData.get('estimated_duration_minutes') || undefined,
     status: formData.get('status') || 'active',
   });
@@ -234,16 +236,39 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
   await assertCoachOwnsStudent(coach.id, parsed.data.student_id);
 
   const supabase = await createClient();
-  const { error } = await supabase.from('workout_plans').insert({
-    coach_id: coach.id,
-    student_id: parsed.data.student_id,
-    title: parsed.data.title,
-    focus: parsed.data.focus ?? null,
-    level: parsed.data.level ?? null,
-    estimated_duration_minutes: parsed.data.estimated_duration_minutes ?? null,
-    status: parsed.data.status,
-  });
-  if (error) return { error: error.message };
+  const { data: plan, error } = await supabase
+    .from('workout_plans')
+    .insert({
+      coach_id: coach.id,
+      student_id: parsed.data.student_id,
+      title: parsed.data.title,
+      focus: parsed.data.focus ?? null,
+      level: parsed.data.level ?? null,
+      split_type: parsed.data.split_type ?? null,
+      estimated_duration_minutes: parsed.data.estimated_duration_minutes ?? null,
+      status: parsed.data.status,
+    })
+    .select('id')
+    .single();
+  if (error || !plan) return { error: error?.message ?? 'No se pudo crear el plan' };
+
+  // Generar días desde la plantilla del split (excepto personalizado).
+  if (parsed.data.split_type) {
+    const days = resolveSplitDays(parsed.data.split_type);
+    if (days.length > 0) {
+      const { error: daysError } = await supabase.from('workout_plan_days').insert(
+        days.map((d) => ({
+          workout_plan_id: plan.id,
+          day_number: d.day_number,
+          title: d.title,
+          focus: d.focus,
+        })),
+      );
+      // El plan ya existe; si fallan los días, la coach puede agregarlos a mano.
+      if (daysError) console.error('No se pudieron generar los días del split:', daysError.message);
+    }
+  }
+
   revalidatePath(`/coach/students/${parsed.data.student_id}/workouts`);
   redirect(`/coach/students/${parsed.data.student_id}/workouts`);
 }
@@ -255,10 +280,13 @@ export async function createExercise(_prev: ActionState, formData: FormData): Pr
     name: formData.get('name'),
     muscle_group: formData.get('muscle_group') || undefined,
     equipment: formData.get('equipment') || undefined,
+    difficulty: formData.get('difficulty') || undefined,
+    movement_pattern: formData.get('movement_pattern') || undefined,
     description: formData.get('description') || undefined,
     instructions: formData.get('instructions') || undefined,
     common_mistakes: formData.get('common_mistakes') || undefined,
     video_url: formData.get('video_url') || undefined,
+    thumbnail_url: formData.get('thumbnail_url') || undefined,
     status: formData.get('status') || 'published',
   });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
@@ -269,15 +297,61 @@ export async function createExercise(_prev: ActionState, formData: FormData): Pr
     name: parsed.data.name,
     muscle_group: parsed.data.muscle_group ?? null,
     equipment: parsed.data.equipment ?? null,
+    difficulty: parsed.data.difficulty ?? null,
+    movement_pattern: parsed.data.movement_pattern ?? null,
     description: parsed.data.description ?? null,
     instructions: parsed.data.instructions ?? null,
     common_mistakes: parsed.data.common_mistakes ?? null,
     video_url: parsed.data.video_url || null,
+    thumbnail_url: parsed.data.thumbnail_url || null,
     status: parsed.data.status,
   });
   if (error) return { error: error.message };
   revalidatePath('/coach/exercises');
   redirect('/coach/exercises');
+}
+
+export async function updateExercise(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const coach = await requireCoach();
+  const id = String(formData.get('id') ?? '');
+  if (!id) return { error: 'Ejercicio no encontrado' };
+  const parsed = exerciseSchema.safeParse({
+    name: formData.get('name'),
+    muscle_group: formData.get('muscle_group') || undefined,
+    equipment: formData.get('equipment') || undefined,
+    difficulty: formData.get('difficulty') || undefined,
+    movement_pattern: formData.get('movement_pattern') || undefined,
+    description: formData.get('description') || undefined,
+    instructions: formData.get('instructions') || undefined,
+    common_mistakes: formData.get('common_mistakes') || undefined,
+    video_url: formData.get('video_url') || undefined,
+    thumbnail_url: formData.get('thumbnail_url') || undefined,
+    status: formData.get('status') || 'published',
+  });
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  const supabase = await createClient();
+  // Una sola coach: puede editar sus ejercicios y los globales (coach_id null).
+  const { error } = await supabase
+    .from('exercises')
+    .update({
+      name: parsed.data.name,
+      muscle_group: parsed.data.muscle_group ?? null,
+      equipment: parsed.data.equipment ?? null,
+      difficulty: parsed.data.difficulty ?? null,
+      movement_pattern: parsed.data.movement_pattern ?? null,
+      description: parsed.data.description ?? null,
+      instructions: parsed.data.instructions ?? null,
+      common_mistakes: parsed.data.common_mistakes ?? null,
+      video_url: parsed.data.video_url || null,
+      thumbnail_url: parsed.data.thumbnail_url || null,
+      status: parsed.data.status,
+    })
+    .eq('id', id)
+    .or(`coach_id.eq.${coach.id},is_global.eq.true`);
+  if (error) return { error: error.message };
+  revalidatePath('/coach/exercises');
+  redirect(`/coach/exercises/${id}`);
 }
 
 export async function archiveExercise(exerciseId: string): Promise<void> {
@@ -450,6 +524,128 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
   if (error) return { error: error.message };
   revalidatePath(`/coach/workouts/plans/${planId}`);
   return { success: 'Ejercicio agregado' };
+}
+
+/** Verifica que el día pertenece a un plan de la coach. */
+async function assertDayOwnedByCoach(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  coachId: string,
+  dayId: string,
+): Promise<boolean> {
+  const { data: day } = await supabase
+    .from('workout_plan_days')
+    .select('workout_plan_id')
+    .eq('id', dayId)
+    .maybeSingle();
+  if (!day) return false;
+  const { data: plan } = await supabase
+    .from('workout_plans')
+    .select('coach_id')
+    .eq('id', day.workout_plan_id)
+    .maybeSingle();
+  return !!plan && plan.coach_id === coachId;
+}
+
+export interface AddPlanExercisesInput {
+  planId: string;
+  dayId: string;
+  items: {
+    exercise_id: string;
+    sets?: number;
+    reps?: string;
+    rest_seconds?: number | null;
+    tempo?: string | null;
+    suggested_weight_kg?: number | null;
+    notes?: string | null;
+  }[];
+}
+
+export async function addPlanExercises(input: AddPlanExercisesInput): Promise<ActionState> {
+  const coach = await requireCoach();
+  if (!input?.dayId || !Array.isArray(input.items) || input.items.length === 0) {
+    return { error: 'Selecciona al menos un ejercicio' };
+  }
+  const supabase = await createClient();
+  if (!(await assertDayOwnedByCoach(supabase, coach.id, input.dayId))) {
+    return { error: 'No autorizado' };
+  }
+
+  const parsedItems: ReturnType<typeof planExerciseItemSchema.parse>[] = [];
+  for (const item of input.items) {
+    const parsed = planExerciseItemSchema.safeParse(item);
+    if (!parsed.success) return { error: firstError(parsed.error.issues) };
+    parsedItems.push(parsed.data);
+  }
+
+  const { data: last } = await supabase
+    .from('workout_plan_exercises')
+    .select('sort_order')
+    .eq('workout_plan_day_id', input.dayId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  let sortOrder = (last?.[0]?.sort_order ?? 0) + 1;
+
+  const rows = parsedItems.map((it) => ({
+    workout_plan_day_id: input.dayId,
+    exercise_id: it.exercise_id,
+    sort_order: sortOrder++,
+    sets: it.sets ?? 3,
+    reps: it.reps ?? '10',
+    rest_seconds: it.rest_seconds ?? null,
+    tempo: it.tempo ?? null,
+    suggested_weight_kg: it.suggested_weight_kg ?? null,
+    notes: it.notes ?? null,
+  }));
+
+  const { error } = await supabase.from('workout_plan_exercises').insert(rows);
+  if (error) return { error: error.message };
+  revalidatePath(`/coach/workouts/plans/${input.planId}`);
+  return { success: `${rows.length} ejercicio(s) agregado(s)` };
+}
+
+export interface UpdatePlanExerciseInput {
+  id: string;
+  planId: string;
+  sets: number;
+  reps: string;
+  rest_seconds?: number | null;
+  tempo?: string | null;
+  suggested_weight_kg?: number | null;
+  notes?: string | null;
+}
+
+export async function updatePlanExercise(input: UpdatePlanExerciseInput): Promise<ActionState> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+
+  const { data: pe } = await supabase
+    .from('workout_plan_exercises')
+    .select('workout_plan_day_id')
+    .eq('id', input.id)
+    .maybeSingle();
+  if (!pe || !(await assertDayOwnedByCoach(supabase, coach.id, pe.workout_plan_day_id))) {
+    return { error: 'No autorizado' };
+  }
+
+  const parsed = planExerciseItemSchema
+    .pick({ sets: true, reps: true, rest_seconds: true, tempo: true, suggested_weight_kg: true, notes: true })
+    .safeParse(input);
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  const { error } = await supabase
+    .from('workout_plan_exercises')
+    .update({
+      sets: parsed.data.sets ?? 3,
+      reps: parsed.data.reps ?? '10',
+      rest_seconds: parsed.data.rest_seconds ?? null,
+      tempo: parsed.data.tempo ?? null,
+      suggested_weight_kg: parsed.data.suggested_weight_kg ?? null,
+      notes: parsed.data.notes ?? null,
+    })
+    .eq('id', input.id);
+  if (error) return { error: error.message };
+  revalidatePath(`/coach/workouts/plans/${input.planId}`);
+  return { success: 'Ejercicio actualizado' };
 }
 
 export async function deletePlanExercise(id: string, planId: string): Promise<void> {
