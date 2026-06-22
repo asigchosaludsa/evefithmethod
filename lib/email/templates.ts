@@ -61,7 +61,8 @@ function shell(preheader: string, inner: string): string {
         <!-- header -->
         <tr>
           <td style="padding:28px 32px 8px;">
-            <span style="font-family:${FONT};font-size:15px;font-weight:800;letter-spacing:2px;color:${C.fg};text-transform:uppercase;">EVEFIT</span>
+            <img src="${SITE}/brand-icon.png" width="30" height="22" alt="" style="vertical-align:middle;margin-right:9px;border:0;" />
+            <span style="font-family:${FONT};font-size:15px;font-weight:800;letter-spacing:2px;color:${C.fg};text-transform:uppercase;vertical-align:middle;">EVEFIT</span>
             <span style="font-family:${FONT};font-size:15px;font-weight:800;letter-spacing:2px;color:${C.primary};text-transform:uppercase;"> / </span>
             <span style="font-family:${FONT};font-size:15px;font-weight:600;letter-spacing:2px;color:${C.muted};text-transform:uppercase;">METHOD</span>
           </td>
