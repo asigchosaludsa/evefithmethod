@@ -17,6 +17,7 @@ import {
   Menu,
   Settings,
   User,
+  UserCog,
   Users,
   Utensils,
   X,
@@ -43,6 +44,7 @@ const COACH_NAV: NavItem[] = [
   { label: 'Ejercicios', href: '/coach/exercises', icon: ListChecks },
   { label: 'Contenido', href: '/coach/content', icon: BookOpen },
   { label: 'Plantillas', href: '/coach/plantillas', icon: Mail },
+  { label: 'Cuentas', href: '/coach/cuentas', icon: UserCog },
   { label: 'Ajustes', href: '/coach/settings', icon: Settings },
 ];
 
