@@ -237,9 +237,12 @@ where email = 'YOUR_EMAIL';
 
 ## Rutas
 
+> **Modelo invite-only + 1 coach (desde 2026-06-22):** no hay auto-registro público. El visitante llena `/solicitud` (formulario de solicitud), la coach lo revisa en `/coach/solicitudes` y genera un link de invitación. Solo con ese link se registra una alumna (`/accept-invitation`). `/register` redirige a `/solicitud`. Un usuario autenticado no invitado (rol `NULL` / inactivo) va a `/sin-acceso`.
+
 ### Públicas
-`/` , `/login` , `/register` , `/accept-invitation` , `/forgot-password` , `/reset-password` ,
+`/` , `/login` , `/solicitud` , `/sin-acceso` , `/accept-invitation` , `/forgot-password` , `/reset-password` ,
 `/update-password` , `/terms` , `/privacy` , `/disclaimer`
+(`/register` existe pero redirige a `/solicitud`.)
 
 ### Auth
 `/auth/callback` , `/auth/auth-code-error` , `/auth/confirm` , `/auth/logout`
@@ -248,7 +251,7 @@ where email = 'YOUR_EMAIL';
 `/onboarding`
 
 ### Coach
-`/coach` , `/coach/students` , `/coach/students/invite` , `/coach/students/[studentId]`
+`/coach` , `/coach/solicitudes` , `/coach/students` , `/coach/students/invite` , `/coach/students/[studentId]`
 (+ `/nutrition` `/workouts` `/progress`) , `/coach/nutrition` , `/coach/workouts` ,
 `/coach/exercises` (+ `/new` `/[id]`) , `/coach/content` (+ `/new` `/[id]`) , `/coach/settings`
 
