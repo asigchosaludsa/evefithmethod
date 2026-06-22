@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { Dumbbell, Plus, Scale } from 'lucide-react';
+import { Dumbbell, Moon, Plus, Scale } from 'lucide-react';
 import { requireStudent } from '@/lib/auth/roles';
 import { getStudentToday } from '@/lib/db/queries/student';
+import { getTrainingCalendarData } from '@/lib/db/queries/training-calendar';
+import { buildCalendar } from '@/domain/workouts/calendar';
 import {
   Button,
   Card,
@@ -19,6 +21,11 @@ export const metadata = { title: 'Hoy' };
 export default async function StudentTodayPage() {
   const profile = await requireStudent();
   const today = await getStudentToday(profile.id);
+  const calendar = await getTrainingCalendarData(profile.id);
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayPlanDay = calendar.plan
+    ? buildCalendar(calendar.days, calendar.plan.starts_at, calendar.plan.weeks, todayISO, todayISO)[0]?.planDay ?? null
+    : null;
   const plan = today.activeNutritionPlan;
   const target = {
     calories: plan?.calories_target ?? null,
@@ -61,19 +68,34 @@ export default async function StudentTodayPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Entrenamiento</CardTitle>
+            <CardTitle>Hoy te toca</CardTitle>
           </CardHeader>
           <CardBody>
-            {today.activeWorkoutPlan ? (
+            {calendar.plan ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-foreground">
-                  <Dumbbell className="size-4 text-primary" />
-                  <span className="font-medium">{today.activeWorkoutPlan.title}</span>
-                </div>
-                <p className="text-sm text-muted">{today.activeWorkoutPlan.focus ?? 'Sesión de hoy'}</p>
-                <Button asChild variant="secondary" size="sm">
-                  <Link href="/student/workout">Ver y registrar</Link>
-                </Button>
+                {todayPlanDay ? (
+                  <>
+                    <div className="flex items-center gap-2 text-foreground">
+                      <Dumbbell className="size-4 text-primary" />
+                      <span className="font-medium">{todayPlanDay.focus ?? todayPlanDay.title}</span>
+                    </div>
+                    <p className="text-sm text-muted">{calendar.plan.title}</p>
+                    <Button asChild variant="secondary" size="sm">
+                      <Link href="/student/workout">Ver y registrar</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-foreground">
+                      <Moon className="size-4 text-muted" />
+                      <span className="font-medium">Hoy descansas</span>
+                    </div>
+                    <p className="text-sm text-muted">Recupera bien para tu próxima sesión.</p>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href="/student/workout">Ver calendario</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted">Sin plan de entrenamiento activo.</p>

@@ -2,9 +2,11 @@ import { requireStudent } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { getStudentCoachId } from '@/lib/db/queries/student';
 import { getActiveWorkoutPlanContent } from '@/lib/db/queries/workout-plan';
+import { getTrainingCalendarData } from '@/lib/db/queries/training-calendar';
 import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { GuidedWorkoutLogForm } from '@/components/student/GuidedWorkoutLogForm';
 import { WorkoutLogForm } from '@/components/student/WorkoutLogForm';
+import { TrainingCalendar } from '@/components/workouts/TrainingCalendar';
 import { formatDateTime } from '@/lib/utils/date';
 import { splitLabel } from '@/lib/constants/splits';
 
@@ -15,8 +17,9 @@ export default async function StudentWorkoutPage() {
   const supabase = await createClient();
   const coachId = await getStudentCoachId(profile.id);
 
-  const [content, { data: exercises }, { data: recent }] = await Promise.all([
+  const [content, calendar, { data: exercises }, { data: recent }] = await Promise.all([
     getActiveWorkoutPlanContent(profile.id),
+    getTrainingCalendarData(profile.id),
     supabase
       .from('exercises')
       .select('id, name')
@@ -33,6 +36,7 @@ export default async function StudentWorkoutPage() {
 
   const plannedDays = (content?.days ?? []).filter((d) => d.exercises.length > 0);
   const hasPlan = plannedDays.length > 0;
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -61,6 +65,23 @@ export default async function StudentWorkoutPage() {
               <WorkoutLogForm exercises={exercises ?? []} workoutPlanId={content?.plan.id ?? null} />
             </>
           )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Calendario de entrenamiento</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <TrainingCalendar
+            studentId={profile.id}
+            plan={calendar.plan}
+            days={calendar.days}
+            exercisesByDay={calendar.exercisesByDay}
+            statusByKey={calendar.statusByKey}
+            canEdit
+            todayISO={todayISO}
+          />
         </CardBody>
       </Card>
 

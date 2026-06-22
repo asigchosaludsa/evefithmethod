@@ -23,6 +23,7 @@ export const workoutPlanSchema = z.object({
     .optional(),
   estimated_duration_minutes: z.coerce.number().int().positive().max(600).nullable().optional(),
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
+  weeks: z.coerce.number().int().min(1).max(52).nullable().optional(),
   starts_at: z.string().optional(),
   ends_at: z.string().optional(),
 });

@@ -308,6 +308,7 @@ type WorkoutPlansRow = {
   focus: string | null;
   level: string | null;
   split_type: SplitType | null;
+  weeks: number | null;
   estimated_duration_minutes: number | null;
   status: PlanStatus;
   starts_at: DateString | null;
@@ -323,6 +324,7 @@ type WorkoutPlansInsert = {
   focus?: string | null;
   level?: string | null;
   split_type?: SplitType | null;
+  weeks?: number | null;
   estimated_duration_minutes?: number | null;
   status?: PlanStatus;
   starts_at?: DateString | null;
@@ -338,6 +340,7 @@ type WorkoutPlanDaysRow = {
   day_number: number;
   title: string;
   focus: string | null;
+  weekday: number | null;
   notes: string | null;
   created_at: Timestamp;
 };
@@ -347,6 +350,7 @@ type WorkoutPlanDaysInsert = {
   day_number: number;
   title: string;
   focus?: string | null;
+  weekday?: number | null;
   notes?: string | null;
   created_at?: Timestamp;
 };
@@ -426,6 +430,7 @@ type WorkoutLogsRow = {
   coach_id: string | null;
   workout_plan_id: string | null;
   workout_plan_day_id: string | null;
+  session_date: DateString | null;
   logged_at: Timestamp;
   status: WorkoutLogStatus;
   perceived_effort: number | null;
@@ -439,6 +444,7 @@ type WorkoutLogsInsert = {
   coach_id?: string | null;
   workout_plan_id?: string | null;
   workout_plan_day_id?: string | null;
+  session_date?: DateString | null;
   logged_at: Timestamp;
   status?: WorkoutLogStatus;
   perceived_effort?: number | null;

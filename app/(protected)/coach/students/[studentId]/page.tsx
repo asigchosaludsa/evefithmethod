@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Apple, ArrowLeft, Dumbbell, LineChart, MessageCircle } from 'lucide-react';
+import { Apple, ArrowLeft, CalendarDays, Dumbbell, LineChart, MessageCircle } from 'lucide-react';
 import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
 import { getStudentDetail } from '@/lib/db/queries/student-detail';
 import { createClient } from '@/lib/supabase/server';
@@ -62,6 +62,11 @@ export default async function StudentDetailPage({
         description={sp?.goal ?? 'Sin objetivo definido'}
         actions={
           <div className="flex flex-wrap items-start gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/coach/students/${studentId}/calendar`}>
+                <CalendarDays className="size-4" /> Calendario
+              </Link>
+            </Button>
             <SendPlanButton studentId={studentId} />
             {waHref && (
               <Button asChild variant="outline" size="sm">

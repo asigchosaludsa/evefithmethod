@@ -12,6 +12,7 @@ import { coachNoteSchema, contentPostSchema, exerciseSchema, planExerciseItemSch
 import { nutritionPlanSchema } from '@/domain/nutrition/schemas';
 import { workoutPlanSchema } from '@/domain/workouts/schemas';
 import { resolveSplitDays } from '@/domain/workouts/splits';
+import { addDaysISO, planActiveWindow } from '@/domain/workouts/calendar';
 
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? 'Revisa los datos ingresados.';
@@ -214,9 +215,17 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
     split_type: formData.get('split_type') || undefined,
     estimated_duration_minutes: formData.get('estimated_duration_minutes') || undefined,
     status: formData.get('status') || 'active',
+    weeks: formData.get('weeks') || undefined,
+    starts_at: formData.get('starts_at') || undefined,
   });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
   await assertCoachOwnsStudent(coach.id, parsed.data.student_id);
+
+  // Ventana activa del plan: ends_at inclusivo = inicio + semanas*7 - 1 día.
+  const startsAt = parsed.data.starts_at ?? null;
+  const weeks = parsed.data.weeks ?? null;
+  const window = planActiveWindow(startsAt, weeks);
+  const endsAt = window ? addDaysISO(window.endExclusiveISO, -1) : null;
 
   const supabase = await createClient();
   const { data: plan, error } = await supabase
@@ -230,6 +239,9 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
       split_type: parsed.data.split_type ?? null,
       estimated_duration_minutes: parsed.data.estimated_duration_minutes ?? null,
       status: parsed.data.status,
+      weeks,
+      starts_at: startsAt,
+      ends_at: endsAt,
     })
     .select('id')
     .single();
@@ -239,13 +251,20 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
   if (parsed.data.split_type) {
     const days = resolveSplitDays(parsed.data.split_type);
     if (days.length > 0) {
+      // Mapeo día -> weekday enviado desde el formulario (weekday_<day_number>).
       const { error: daysError } = await supabase.from('workout_plan_days').insert(
-        days.map((d) => ({
-          workout_plan_id: plan.id,
-          day_number: d.day_number,
-          title: d.title,
-          focus: d.focus,
-        })),
+        days.map((d) => {
+          const raw = formData.get(`weekday_${d.day_number}`);
+          const wd = raw ? Number(raw) : NaN;
+          const weekday = Number.isInteger(wd) && wd >= 1 && wd <= 7 ? wd : null;
+          return {
+            workout_plan_id: plan.id,
+            day_number: d.day_number,
+            title: d.title,
+            focus: d.focus,
+            weekday,
+          };
+        }),
       );
       // El plan ya existe; si fallan los días, la coach puede agregarlos a mano.
       if (daysError) console.error('No se pudieron generar los días del split:', daysError.message);
