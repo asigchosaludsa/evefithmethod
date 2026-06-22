@@ -24,7 +24,7 @@ export default function LandingPage() {
           items={['Entrenamiento', 'Nutrición', 'Progreso real', 'Coach Radar', 'Por invitación', 'Macros en vivo', 'Constancia']}
         />
 
-        {/* Cómo funciona — genuine 3-step sequence */}
+        {/* Como funciona: genuine 3-step sequence */}
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <Reveal className="mb-10 max-w-xl">
             <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">Cómo funciona</h2>
@@ -49,7 +49,7 @@ export default function LandingPage() {
           </Reveal>
         </section>
 
-        {/* Features — training emphasized, asymmetric (not an identical grid) */}
+        {/* Features: training emphasized, asymmetric (not an identical grid) */}
         <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
           <Reveal>
             <div className="grid gap-4 lg:grid-cols-3">
@@ -77,10 +77,10 @@ export default function LandingPage() {
                 </ul>
               </article>
 
-              <FeatureCard icon={Apple} title="Nutrición y macros" desc="Registra comidas y mira calorías y macros en vivo contra tu meta." />
-              <FeatureCard icon={LineChart} title="Progreso real" desc="Peso, medidas y fotos para ver la evolución semana a semana." />
-              <FeatureCard icon={Activity} title="Coach Radar" desc="Alertas que muestran a quién revisar hoy. Nada se te escapa." />
-              <FeatureCard icon={BookOpen} title="Tips y contenido" desc="Material educativo que la coach asigna a cada alumna." />
+              <FeatureCard icon={Apple} tone="success" title="Nutrición y macros" desc="Registra comidas y mira calorías y macros en vivo contra tu meta." />
+              <FeatureCard icon={LineChart} tone="info" title="Progreso real" desc="Peso, medidas y fotos para ver la evolución semana a semana." />
+              <FeatureCard icon={Activity} tone="warning" title="Coach Radar" desc="Alertas que muestran a quién revisar hoy. Nada se te escapa." />
+              <FeatureCard icon={BookOpen} tone="primary" title="Tips y contenido" desc="Material educativo que la coach asigna a cada alumna." />
             </div>
           </Reveal>
         </section>
@@ -133,18 +133,27 @@ export default function LandingPage() {
   );
 }
 
+const FEATURE_TONES = {
+  primary: 'bg-primary/15 text-primary',
+  info: 'bg-info/15 text-info',
+  success: 'bg-success/15 text-success',
+  warning: 'bg-warning/15 text-warning',
+} as const;
+
 function FeatureCard({
   icon: Icon,
   title,
   desc,
+  tone = 'primary',
 }: {
   icon: typeof Dumbbell;
   title: string;
   desc: string;
+  tone?: keyof typeof FEATURE_TONES;
 }) {
   return (
     <article className="rounded-2xl border border-border bg-surface p-6 transition-colors duration-200 hover:border-muted/40">
-      <span className="flex size-10 items-center justify-center rounded-lg bg-elevated text-primary">
+      <span className={`flex size-10 items-center justify-center rounded-lg ${FEATURE_TONES[tone]}`}>
         <Icon className="size-5" aria-hidden />
       </span>
       <h3 className="mt-4 font-display text-base font-semibold text-foreground">{title}</h3>

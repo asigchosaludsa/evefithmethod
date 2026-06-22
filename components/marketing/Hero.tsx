@@ -92,11 +92,11 @@ export function Hero() {
           >
             <Button asChild size="lg">
               <Link href="/register">
-                Empezar ahora <ArrowRight className="size-4" />
+                Crear cuenta <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/login">Ya tengo cuenta</Link>
+              <Link href="/login">Iniciar sesión</Link>
             </Button>
           </div>
         </div>
