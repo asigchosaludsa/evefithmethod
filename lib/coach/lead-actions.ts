@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createInvitation } from '@/lib/db/mutations/invitations';
 import { getURL } from '@/lib/utils/url';
 import { sendEmail } from '@/lib/email/send';
-import { invitationEmail } from '@/lib/email/templates';
+import { renderEmail } from '@/lib/email/render';
 
 export type ConvertLeadResult =
   | { ok: true; link: string; phone: string; email: string; emailed: boolean }
@@ -69,8 +69,10 @@ export async function convertLeadToInvitation(leadId: string): Promise<ConvertLe
     if (updateError) return { ok: false, error: updateError.message };
 
     // Auto-send the invitation by email (fails soft: WhatsApp/copy still work).
-    const tpl = invitationEmail({ name: lead.full_name, acceptUrl: link });
-    const emailed = await sendEmail({ to: lead.email, subject: tpl.subject, html: tpl.html });
+    const tpl = await renderEmail('invitation', { nombre: lead.full_name, link });
+    const emailed = tpl
+      ? await sendEmail({ to: lead.email, subject: tpl.subject, html: tpl.html })
+      : false;
 
     revalidatePath('/coach/solicitudes');
     return { ok: true, link, phone: lead.phone, email: lead.email, emailed };

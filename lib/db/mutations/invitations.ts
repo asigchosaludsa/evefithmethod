@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateInvitationToken, hashToken } from '@/lib/utils/tokens';
 import { sendEmail } from '@/lib/email/send';
-import { welcomeEmail } from '@/lib/email/templates';
+import { renderEmail } from '@/lib/email/render';
 
 export interface CreateInvitationInput {
   coachId: string;
@@ -104,8 +104,8 @@ export async function acceptInvitation(input: {
     .eq('id', inv.id);
 
   // Welcome email (fails soft: never block a successful registration).
-  const tpl = welcomeEmail({ name: input.fullName });
-  await sendEmail({ to: inv.email, subject: tpl.subject, html: tpl.html });
+  const tpl = await renderEmail('welcome', { nombre: input.fullName });
+  if (tpl) await sendEmail({ to: inv.email, subject: tpl.subject, html: tpl.html });
 
   return { success: true, email: inv.email };
 }

@@ -22,12 +22,12 @@ const C = {
 };
 const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
-function escape(s: string): string {
+export function escape(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** Bulletproof, table-based scarlet CTA button. */
-function button(href: string, label: string): string {
+export function button(href: string, label: string): string {
   return `
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 8px;">
     <tr>
@@ -39,7 +39,7 @@ function button(href: string, label: string): string {
 }
 
 /** Page wrapper: dark canvas, centered surface card, wordmark header + footer. */
-function shell(preheader: string, inner: string): string {
+export function shell(preheader: string, inner: string): string {
   const year = '2026';
   return `<!doctype html>
 <html lang="es">
@@ -94,10 +94,10 @@ function shell(preheader: string, inner: string): string {
 </html>`;
 }
 
-function h1(text: string): string {
+export function h1(text: string): string {
   return `<h1 style="margin:8px 0 0;font-family:${FONT};font-size:26px;line-height:1.2;font-weight:800;color:${C.fg};">${text}</h1>`;
 }
-function p(text: string): string {
+export function p(text: string): string {
   return `<p style="margin:16px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted};">${text}</p>`;
 }
 
@@ -106,37 +106,9 @@ export interface EmailContent {
   html: string;
 }
 
-/** Invitation: sent when the coach converts a lead. Personalized by name. */
-export function invitationEmail(params: { name: string; acceptUrl: string }): EmailContent {
-  const name = escape((params.name || '').split(' ')[0] || 'hola');
-  const inner = `
-    ${h1(`Tu cupo esta listo, ${name}`)}
-    ${p('La coach reviso tu solicitud y te dio acceso a EveFit Method. Con el siguiente boton creas tu cuenta de alumna y empiezas tu metodo: entrenamiento y nutricion personalizados, con lo que toca hacer hoy.')}
-    ${button(params.acceptUrl, 'Crear mi cuenta')}
-    ${p(`Este enlace es personal y caduca en 7 dias. Si el boton no funciona, copia y pega esta direccion en tu navegador:<br><span style="color:${C.faint};font-size:13px;word-break:break-all;">${escape(params.acceptUrl)}</span>`)}
-  `;
-  return {
-    subject: 'Tu cupo en EveFit Method esta listo',
-    html: shell('La coach te dio acceso. Crea tu cuenta y empieza tu metodo.', inner),
-  };
-}
-
-/** Welcome: sent after the student finishes registering. Personalized by name. */
-export function welcomeEmail(params: { name: string }): EmailContent {
-  const name = escape((params.name || '').split(' ')[0] || 'bienvenida');
-  const inner = `
-    ${h1(`Bienvenida, ${name}`)}
-    ${p('Tu cuenta ya esta activa. A partir de hoy, cada dia sabras exactamente que hacer: tu entrenamiento, tu nutricion y tu progreso en un solo lugar. La coach revisa y ajusta contigo.')}
-    ${p('Asi empiezas:')}
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 0;">
-      <tr><td style="padding:6px 0;font-family:${FONT};font-size:15px;color:${C.fg};"><span style="color:${C.primary};font-weight:700;">1.</span>&nbsp; Abre tu pantalla de Hoy y mira tu plan.</td></tr>
-      <tr><td style="padding:6px 0;font-family:${FONT};font-size:15px;color:${C.fg};"><span style="color:${C.primary};font-weight:700;">2.</span>&nbsp; Registra tus comidas y entrenamientos.</td></tr>
-      <tr><td style="padding:6px 0;font-family:${FONT};font-size:15px;color:${C.fg};"><span style="color:${C.primary};font-weight:700;">3.</span>&nbsp; Sube tu progreso y deja que la coach te guie.</td></tr>
-    </table>
-    ${button(`${SITE}/student/today`, 'Entrar a mi metodo')}
-  `;
-  return {
-    subject: 'Bienvenida a EveFit Method',
-    html: shell('Tu cuenta ya esta activa. Empieza tu metodo hoy.', inner),
-  };
-}
+/**
+ * NOTE: the concrete per-message emails (invitation, welcome, etc.) now live in
+ * lib/email/render.ts, which merges coach-editable overrides from the
+ * message_templates table with on-brand defaults and reuses the shell + block
+ * helpers exported above. This file only owns the email-safe building blocks.
+ */

@@ -721,6 +721,30 @@ type LeadsInsert = {
   created_at?: Timestamp;
 };
 
+// message_templates (coach-editable)
+type MessageTemplatesRow = {
+  key: string;
+  channel: 'email' | 'whatsapp';
+  enabled: boolean;
+  subject: string | null;
+  heading: string | null;
+  body: string | null;
+  cta_label: string | null;
+  cta_target: string | null;
+  updated_at: Timestamp;
+};
+type MessageTemplatesInsert = {
+  key: string;
+  channel: 'email' | 'whatsapp';
+  enabled?: boolean;
+  subject?: string | null;
+  heading?: string | null;
+  body?: string | null;
+  cta_label?: string | null;
+  cta_target?: string | null;
+  updated_at?: Timestamp;
+};
+
 type Table<Row, Insert> = {
   Row: Row;
   Insert: Insert;
@@ -757,6 +781,7 @@ export type Database = {
       alerts: Table<AlertsRow, AlertsInsert>;
       auth_events: Table<AuthEventsRow, AuthEventsInsert>;
       leads: Table<LeadsRow, LeadsInsert>;
+      message_templates: Table<MessageTemplatesRow, MessageTemplatesInsert>;
     };
     Views: Record<string, never>;
     Functions: {

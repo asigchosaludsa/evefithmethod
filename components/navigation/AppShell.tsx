@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LineChart,
   ListChecks,
+  Mail,
   Menu,
   Settings,
   User,
@@ -41,6 +42,7 @@ const COACH_NAV: NavItem[] = [
   { label: 'Entrenamientos', href: '/coach/workouts', icon: Dumbbell },
   { label: 'Ejercicios', href: '/coach/exercises', icon: ListChecks },
   { label: 'Contenido', href: '/coach/content', icon: BookOpen },
+  { label: 'Plantillas', href: '/coach/plantillas', icon: Mail },
   { label: 'Ajustes', href: '/coach/settings', icon: Settings },
 ];
 
