@@ -1,29 +1,27 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
- * Premium hero background video, built for reliable inline autoplay on iOS
- * Safari (which is stricter than iOS Chrome).
+ * Premium hero background, designed so the hero is ALWAYS alive, including on
+ * iOS Low Power Mode (which blocks all video autoplay at the OS level, with no
+ * web workaround).
  *
- * Why this shape:
- * - The canonical iOS autoplay recipe needs ALL of: the `autoplay` ATTRIBUTE,
- *   `muted`, `playsInline`, `loop`. Relying only on an imperative play() call
- *   is more easily blocked by Safari's autoplay policy.
- * - React does not reliably mirror the `muted` attribute to the muted DOM
- *   *property*; Safari refuses to autoplay unless the property is true, so we
- *   set it imperatively below.
- * - Visibility is NOT gated on JS events. Earlier the video started at
- *   opacity 0 and only revealed onCanPlay, an event iOS Safari may never fire
- *   with deferred preload, leaving the hero blank forever. Now the element is
- *   visible by default (`.bgvideo`); the poster shows instantly even if
- *   autoplay is blocked (e.g. Low Power Mode), and the fade is a pure-CSS
- *   enhancement.
- * - The clip is encoded for maximum compatibility: H.264 Main@3.1, 720x1280,
- *   yuv420p, faststart, no audio (~1.6MB).
+ * Two layers:
+ * 1. An always-animated Ken Burns poster (CSS transform). CSS transforms keep
+ *    running in Low Power Mode, so the majority of mobile users (often on
+ *    battery saver) still get cinematic motion.
+ * 2. The video, on top, which fades in ONLY once it is genuinely playing
+ *    (first timeupdate with currentTime > 0). When autoplay is blocked the
+ *    video never reveals and the animated poster carries the hero. This also
+ *    fixes the earlier iOS Safari bug (canplay was unreliable).
+ *
+ * The clip is encoded for maximum compatibility: H.264 Main@3.1, 720x1280,
+ * yuv420p, faststart, no audio (~1.6MB).
  */
 export function HeroBackgroundVideo() {
   const ref = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const v = ref.current;
@@ -34,29 +32,38 @@ export function HeroBackgroundVideo() {
     v.defaultMuted = true;
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      // Respect reduced motion: stop playback, leave the static poster/frame.
+      // Respect reduced motion: no playback, the static poster shows.
       v.removeAttribute('autoplay');
       v.pause();
       return;
     }
 
-    // Belt-and-suspenders: some engines still need an explicit play() even
-    // with the autoplay attribute present.
+    // Belt-and-suspenders: some engines need an explicit play() even with the
+    // autoplay attribute present. Harmless if autoplay is blocked.
     const p = v.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});
   }, []);
 
   return (
     <div aria-hidden className="absolute inset-0 overflow-hidden">
+      {/* Always-animated poster: alive even when video autoplay is blocked. */}
+      <div
+        className="kenburns absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/video_fondo_poster.jpg)' }}
+      />
+      {/* Video enhancement: fades in only once it is truly playing. */}
       <video
         ref={ref}
-        className="bgvideo size-full object-cover"
-        poster="/video_fondo_poster.jpg"
+        className="absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-out"
+        style={{ opacity: playing ? 1 : 0 }}
         autoPlay
         muted
         loop
         playsInline
         preload="auto"
+        onTimeUpdate={(e) => {
+          if (e.currentTarget.currentTime > 0) setPlaying(true);
+        }}
       >
         <source src="/video_fondo.mp4" type="video/mp4" />
       </video>

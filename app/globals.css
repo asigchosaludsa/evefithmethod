@@ -215,17 +215,23 @@ h4,
   animation: floatY 6s var(--ease-in-out) infinite;
 }
 
-/* Hero background video. Visible by default so it is NEVER blank (poster shows
-   instantly even if autoplay is blocked, e.g. iOS Low Power Mode). The fade is
-   a pure-CSS enhancement that does not gate visibility on JS events — iOS
-   Safari does not reliably fire canplay, which previously left it hidden. */
-.bgvideo {
-  opacity: 1;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .bgvideo {
-    animation: fade 1s var(--ease-out-expo) both;
+/* Hero background. The poster sits in an always-animated Ken Burns layer (slow
+   cinematic zoom/pan via CSS transform), which keeps the hero alive even when
+   the OS blocks video autoplay (iOS Low Power Mode blocks ALL video autoplay;
+   CSS transforms still run). The video fades in on top only once it is actually
+   playing; in Low Power Mode it never plays and the animated poster carries the
+   hero. Reduced-motion users get the static poster (neutralized below). */
+@keyframes kenburns {
+  from {
+    transform: scale(1.06) translate3d(0, 0, 0);
   }
+  to {
+    transform: scale(1.2) translate3d(0, -3%, 0);
+  }
+}
+.kenburns {
+  animation: kenburns 24s var(--ease-in-out) infinite alternate;
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
