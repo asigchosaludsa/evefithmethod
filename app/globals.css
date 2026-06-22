@@ -40,6 +40,8 @@
   /* Easing — strong curves (override Tailwind defaults) */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root {
@@ -120,6 +122,92 @@ h4,
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ===========================================================================
+   Landing motion (brand register). Reduced-motion is handled by the block at
+   the bottom, which neutralizes all of these.
+   =========================================================================== */
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes aurora {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate3d(5%, 4%, 0) scale(1.18);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+    opacity: 0.5;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* On-load staggered hero entrance (CSS-only; safe in SSR/headless). */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-rise {
+    opacity: 0;
+    animation: revealUp 0.85s var(--ease-out-expo) both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+}
+
+/* Scroll reveals: progressive enhancement. Default state is fully visible;
+   only browsers that support scroll-driven timelines apply the entrance. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: revealUp linear both;
+      animation-timeline: view();
+      animation-range: entry 2% cover 26%;
+    }
+  }
+}
+
+.aurora {
+  animation: aurora 14s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+
+.marquee-track {
+  animation: marquee 32s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.float-slow {
+  animation: floatY 6s var(--ease-in-out) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
