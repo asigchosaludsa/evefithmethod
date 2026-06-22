@@ -336,7 +336,7 @@ Después del despliegue: actualizar Site URL + Redirect URLs en Supabase al domi
 ### Pendientes antes de producción
 
 - [ ] **Aplicar migraciones `0007_storage_limits.sql` y `0008_rate_limiting.sql`** en el editor SQL de Supabase (EN ORDEN). El rate limiting hace fail-open hasta que se aplique `0008`.
-- [ ] Activar **CAPTCHA** de Supabase (Authentication > Attack Protection) como complemento al rate limiting.
+- [x] **CAPTCHA** (Cloudflare Turnstile) integrado: widget en login/recuperar/solicitud, validado por Supabase (auth) y server-side (solicitud). Verificado E2E.
 - [ ] **SMTP personalizado** (correos transaccionales en producción).
 - [ ] **OAuth** Google/Facebook/Apple (configuración en cada proveedor + Supabase).
 - [ ] Rotar `SUPABASE_SECRET_KEY` (la clave pasó por el chat). **Aplazado por decisión de la dueña.**
