@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Archivo, Inter } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const archivo = Archivo({
@@ -38,7 +39,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${archivo.variable} ${inter.variable} h-full`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
