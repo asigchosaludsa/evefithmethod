@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -18,7 +19,18 @@ export default async function LoginPage({
         : null;
 
   return (
-    <AuthShell title="Bienvenida de vuelta" subtitle="Entra para continuar tu método">
+    <AuthShell
+      title="Bienvenida de vuelta"
+      subtitle="Entra para continuar tu método"
+      footer={
+        <>
+          ¿Aún no entrenas con la coach?{' '}
+          <Link href="/solicitud" className="text-primary hover:underline">
+            Empieza ya
+          </Link>
+        </>
+      }
+    >
       {message && (
         <p className="mb-4 rounded-md border border-danger/25 bg-danger/5 p-3 text-sm text-danger" role="alert">
           {message}

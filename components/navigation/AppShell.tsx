@@ -9,6 +9,7 @@ import {
   BookOpen,
   Dumbbell,
   Home,
+  Inbox,
   LayoutDashboard,
   LineChart,
   ListChecks,
@@ -35,6 +36,7 @@ interface NavItem {
 const COACH_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/coach', icon: LayoutDashboard },
   { label: 'Alumnas', href: '/coach/students', icon: Users },
+  { label: 'Solicitudes', href: '/coach/solicitudes', icon: Inbox },
   { label: 'Nutrición', href: '/coach/nutrition', icon: Apple },
   { label: 'Entrenamientos', href: '/coach/workouts', icon: Dumbbell },
   { label: 'Ejercicios', href: '/coach/exercises', icon: ListChecks },

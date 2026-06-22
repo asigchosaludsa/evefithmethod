@@ -1,8 +1,10 @@
 import Link from 'next/link';
-import { ArrowRight, Dumbbell, Apple, LineChart, Activity, BookOpen } from 'lucide-react';
+import { ArrowRight, Dumbbell, Apple, LineChart, Bell, BookOpen } from 'lucide-react';
 import { PublicNav } from '@/components/navigation/PublicNav';
 import { Button, Logo } from '@/components/common';
 import { Hero } from '@/components/marketing/Hero';
+import { SecondaryVideo } from '@/components/marketing/SecondaryVideo';
+import { WhatsappFab } from '@/components/marketing/WhatsappFab';
 import { Marquee } from '@/components/marketing/Marquee';
 import { Reveal } from '@/components/marketing/Reveal';
 
@@ -20,8 +22,10 @@ export default function LandingPage() {
       <main className="flex-1">
         <Hero />
 
+        <SecondaryVideo />
+
         <Marquee
-          items={['Entrenamiento', 'Nutrición', 'Progreso real', 'Coach Radar', 'Por invitación', 'Macros en vivo', 'Constancia']}
+          items={['Entrenamiento', 'Nutrición', 'Progreso real', 'Recordatorios', 'Por invitación', 'Macros en vivo', 'Constancia']}
         />
 
         {/* Como funciona: genuine 3-step sequence */}
@@ -79,7 +83,7 @@ export default function LandingPage() {
 
               <FeatureCard icon={Apple} tone="success" title="Nutrición y macros" desc="Registra comidas y mira calorías y macros en vivo contra tu meta." />
               <FeatureCard icon={LineChart} tone="info" title="Progreso real" desc="Peso, medidas y fotos para ver la evolución semana a semana." />
-              <FeatureCard icon={Activity} tone="warning" title="Coach Radar" desc="Alertas que muestran a quién revisar hoy. Nada se te escapa." />
+              <FeatureCard icon={Bell} tone="warning" title="Recordatorios" desc="Notificaciones para recordarte que completes tu plan." />
               <FeatureCard icon={BookOpen} tone="primary" title="Tips y contenido" desc="Material educativo que la coach asigna a cada alumna." />
             </div>
           </Reveal>
@@ -96,14 +100,14 @@ export default function LandingPage() {
                 filter: 'blur(40px)',
               }}
             />
-            <h2 className="relative font-display text-3xl font-bold text-foreground sm:text-4xl">Empieza tu método hoy</h2>
+            <h2 className="relative font-display text-3xl font-bold text-foreground sm:text-4xl">Empieza tu planificación hoy</h2>
             <p className="relative mx-auto mt-3 max-w-md text-muted">
               Crea tu cuenta o acepta la invitación de tu coach y empieza con acompañamiento real.
             </p>
             <div className="relative mt-7 flex justify-center">
               <Button asChild size="lg">
-                <Link href="/register">
-                  Crear cuenta <ArrowRight className="size-4" />
+                <Link href="/solicitud">
+                  Empieza ya <ArrowRight className="size-4" />
                 </Link>
               </Button>
             </div>
@@ -121,7 +125,7 @@ export default function LandingPage() {
           </p>
           <nav className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
             <Link href="/login" className="hover:text-foreground">Iniciar sesión</Link>
-            <Link href="/register" className="hover:text-foreground">Crear cuenta</Link>
+            <Link href="/solicitud" className="hover:text-foreground">Empieza ya</Link>
             <Link href="/terms" className="hover:text-foreground">Términos</Link>
             <Link href="/privacy" className="hover:text-foreground">Privacidad</Link>
             <Link href="/disclaimer" className="hover:text-foreground">Aviso de salud</Link>
@@ -129,6 +133,8 @@ export default function LandingPage() {
           <p className="mt-6 text-xs text-faint">© {new Date().getFullYear()} EveFit Method</p>
         </div>
       </footer>
+
+      <WhatsappFab />
     </>
   );
 }

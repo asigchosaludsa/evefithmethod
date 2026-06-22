@@ -686,6 +686,41 @@ type AuthEventsInsert = {
   created_at?: Timestamp;
 };
 
+// leads (public request / "solicitudes")
+export type LeadStatus = 'new' | 'contacted' | 'converted' | 'rejected';
+type LeadsRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  goal: string;
+  experience_level: string | null;
+  age: number | null;
+  city: string | null;
+  availability: string | null;
+  injuries: string | null;
+  message: string | null;
+  status: LeadStatus;
+  invitation_id: string | null;
+  created_at: Timestamp;
+};
+type LeadsInsert = {
+  id?: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  goal: string;
+  experience_level?: string | null;
+  age?: number | null;
+  city?: string | null;
+  availability?: string | null;
+  injuries?: string | null;
+  message?: string | null;
+  status?: LeadStatus;
+  invitation_id?: string | null;
+  created_at?: Timestamp;
+};
+
 type Table<Row, Insert> = {
   Row: Row;
   Insert: Insert;
@@ -721,6 +756,7 @@ export type Database = {
       student_checkins: Table<StudentCheckinsRow, StudentCheckinsInsert>;
       alerts: Table<AlertsRow, AlertsInsert>;
       auth_events: Table<AuthEventsRow, AuthEventsInsert>;
+      leads: Table<LeadsRow, LeadsInsert>;
     };
     Views: Record<string, never>;
     Functions: {

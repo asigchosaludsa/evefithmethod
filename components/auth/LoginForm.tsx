@@ -29,8 +29,8 @@ export function LoginForm() {
         <Link href="/forgot-password" className="text-muted transition-colors hover:text-foreground">
           Olvidé mi contraseña
         </Link>
-        <Link href="/register" className="text-primary hover:underline">
-          Crear cuenta
+        <Link href="/solicitud" className="text-primary hover:underline">
+          Empieza ya
         </Link>
       </div>
     </form>

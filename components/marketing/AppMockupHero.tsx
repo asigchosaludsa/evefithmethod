@@ -1,8 +1,14 @@
 'use client';
 
 import { useRef } from 'react';
-import { Dumbbell } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { ProgressRing } from '@/components/common';
+
+const ROWS = [
+  { v: 75, label: 'Entrenamiento', color: 'var(--color-primary)', highlight: true },
+  { v: 60, label: 'Alimentación', color: 'var(--color-warning)', highlight: false },
+  { v: 40, label: 'Recuperación', color: 'var(--color-success)', highlight: false },
+];
 
 /** Decorative app "Hoy" screen with a subtle 3D tilt-on-pointer + float. */
 export function AppMockupHero() {
@@ -30,41 +36,27 @@ export function AppMockupHero() {
       >
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary">EVEFIT / METHOD</span>
-          <span className="size-7 rounded-full border border-hairline bg-surface" />
+          <span aria-hidden className="size-2.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
         </div>
 
         <p className="mt-4 font-display text-xl font-bold text-foreground">Hola, Camila</p>
-        <p className="text-xs text-muted">Hoy enfócate en tu proteína</p>
+        <p className="text-xs text-muted">Tu método de hoy</p>
 
-        <div className="mt-4 flex items-center gap-4">
-          <ProgressRing value={79} size={92} strokeWidth={9}>
-            <span className="tabular font-display text-lg font-bold text-foreground">1420</span>
-            <span className="text-[10px] text-muted">/1800 kcal</span>
-          </ProgressRing>
-          <div className="flex-1 space-y-2">
-            {[
-              { l: 'Proteína', v: 72, c: 'var(--color-info)' },
-              { l: 'Carbos', v: 64, c: 'var(--color-warning)' },
-              { l: 'Grasas', v: 58, c: 'var(--color-success)' },
-            ].map((m) => (
-              <div key={m.l}>
-                <div className="mb-1 flex justify-between text-[10px] text-muted">
-                  <span>{m.l}</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-border">
-                  <div className="h-full rounded-full" style={{ width: `${m.v}%`, backgroundColor: m.c }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm text-foreground">
-          <Dumbbell className="size-4 text-primary" aria-hidden />
-          Entreno de hoy: <b className="font-semibold">Tren inferior</b>
-        </div>
-        <div className="mt-3 rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-on-primary">
-          Registrar comida
+        <div className="mt-4 space-y-2.5">
+          {ROWS.map((r) => (
+            <div
+              key={r.label}
+              className={`flex items-center gap-3 rounded-xl border bg-surface px-3 py-2.5 ${
+                r.highlight ? 'border-primary/50' : 'border-hairline'
+              }`}
+            >
+              <ProgressRing value={r.v} size={40} strokeWidth={5} color={r.color}>
+                <span className="tabular text-[10px] font-bold text-foreground">{r.v}%</span>
+              </ProgressRing>
+              <span className="flex-1 text-sm font-medium text-foreground">{r.label}</span>
+              <ChevronRight className="size-4 text-muted" aria-hidden />
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -61,7 +61,7 @@ export function Hero() {
             className="hero-rise mt-6 font-display text-[clamp(2.6rem,7vw,5rem)] font-extrabold leading-[1.02] tracking-tight text-foreground"
             style={{ '--i': 1, textWrap: 'balance' } as React.CSSProperties}
           >
-            Tu coaching fitness,
+            Tu coaching fitness para entrenar
             <br />
             con{' '}
             <span className="relative text-primary">
@@ -83,16 +83,16 @@ export function Hero() {
             className="hero-rise mt-5 max-w-md text-base text-muted sm:text-lg"
             style={{ '--i': 2 } as React.CSSProperties}
           >
-            La coach arma tu plan de entrenamiento y nutrición. Tú sabes qué hacer hoy; ella sabe a
-            quién revisar. Acompañamiento real, por invitación.
+            La coach arma tu plan. Tú sabes qué hacer hoy; ella sabe qué revisar. Acompañamiento
+            real, método eficaz, resultados garantizados.
           </p>
           <div
             className="hero-rise mt-8 flex flex-col gap-3 sm:flex-row"
             style={{ '--i': 3 } as React.CSSProperties}
           >
             <Button asChild size="lg">
-              <Link href="/register">
-                Crear cuenta <ArrowRight className="size-4" />
+              <Link href="/solicitud">
+                Empieza ya <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">

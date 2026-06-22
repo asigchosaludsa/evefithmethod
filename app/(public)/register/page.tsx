@@ -1,17 +1,8 @@
-import { AuthShell } from '@/components/auth/AuthShell';
-import { OAuthButtons } from '@/components/auth/OAuthButtons';
-import { RegisterForm } from '@/components/auth/RegisterForm';
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Crear cuenta' };
-
+// El registro público está cerrado: EveFit Method es por invitación.
+// Conservamos la ruta para que los enlaces antiguos no den 404 y enviamos
+// a la solicitud de cupo.
 export default function RegisterPage() {
-  return (
-    <AuthShell title="Crea tu cuenta" subtitle="Empieza tu método con acompañamiento real">
-      <OAuthButtons />
-      <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wider text-faint">
-        <span className="h-px flex-1 bg-hairline" />o con tu email<span className="h-px flex-1 bg-hairline" />
-      </div>
-      <RegisterForm />
-    </AuthShell>
-  );
+  redirect('/solicitud');
 }
