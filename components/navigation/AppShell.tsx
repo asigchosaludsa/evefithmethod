@@ -4,16 +4,51 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Menu, X, type LucideIcon } from 'lucide-react';
+import {
+  Apple,
+  BookOpen,
+  Dumbbell,
+  Home,
+  LayoutDashboard,
+  LineChart,
+  ListChecks,
+  Menu,
+  Settings,
+  User,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { Logo } from '@/components/common';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { cn } from '@/lib/utils/cn';
 
-export interface NavItem {
+interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
 }
+
+// Nav definitions live INSIDE this client component so the icon components
+// never cross the Server -> Client boundary (which RSC forbids).
+const COACH_NAV: NavItem[] = [
+  { label: 'Dashboard', href: '/coach', icon: LayoutDashboard },
+  { label: 'Alumnas', href: '/coach/students', icon: Users },
+  { label: 'Nutrición', href: '/coach/nutrition', icon: Apple },
+  { label: 'Entrenamientos', href: '/coach/workouts', icon: Dumbbell },
+  { label: 'Ejercicios', href: '/coach/exercises', icon: ListChecks },
+  { label: 'Contenido', href: '/coach/content', icon: BookOpen },
+  { label: 'Ajustes', href: '/coach/settings', icon: Settings },
+];
+
+const STUDENT_NAV: NavItem[] = [
+  { label: 'Hoy', href: '/student/today', icon: Home },
+  { label: 'Comidas', href: '/student/meals', icon: Apple },
+  { label: 'Entreno', href: '/student/workout', icon: Dumbbell },
+  { label: 'Progreso', href: '/student/progress', icon: LineChart },
+  { label: 'Contenido', href: '/student/content', icon: BookOpen },
+  { label: 'Perfil', href: '/student/profile', icon: User },
+];
 
 export interface AppShellUser {
   name: string;
@@ -22,7 +57,7 @@ export interface AppShellUser {
 }
 
 function isActive(pathname: string, href: string): boolean {
-  if (href.endsWith('/today') || pathname === href) return pathname === href;
+  if (href.endsWith('/today') || href === '/coach') return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -40,9 +75,7 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
             aria-current={active ? 'page' : undefined}
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 ease-out',
-              active
-                ? 'bg-primary/12 text-primary'
-                : 'text-muted hover:bg-elevated hover:text-foreground',
+              active ? 'bg-primary/12 text-primary' : 'text-muted hover:bg-elevated hover:text-foreground',
             )}
           >
             <item.icon className="size-4 shrink-0" aria-hidden />
@@ -54,7 +87,15 @@ function NavLinks({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
   );
 }
 
-function SidebarBody({ items, user, onNavigate }: { items: NavItem[]; user: AppShellUser; onNavigate?: () => void }) {
+function SidebarBody({
+  items,
+  user,
+  onNavigate,
+}: {
+  items: NavItem[];
+  user: AppShellUser;
+  onNavigate?: () => void;
+}) {
   return (
     <div className="flex h-full flex-col gap-6 p-4">
       <Link href="/" className="px-2" onClick={onNavigate}>
@@ -76,15 +117,16 @@ function SidebarBody({ items, user, onNavigate }: { items: NavItem[]; user: AppS
 }
 
 export function AppShell({
-  items,
+  variant,
   user,
   children,
 }: {
-  items: NavItem[];
+  variant: 'coach' | 'student';
   user: AppShellUser;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
+  const items = variant === 'coach' ? COACH_NAV : STUDENT_NAV;
 
   return (
     <div className="min-h-screen">
