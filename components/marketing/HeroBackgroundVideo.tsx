@@ -2,26 +2,30 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+type Mode = 'poster' | 'video' | 'webp';
+
 /**
- * Premium hero background, designed so the hero is ALWAYS alive, including on
- * iOS Low Power Mode (which blocks all video autoplay at the OS level, with no
- * web workaround).
+ * Premium hero background, built to stay alive on every browser, including
+ * iOS Safari in Low Power Mode (which blocks ALL video autoplay at the OS
+ * level, with no web workaround).
  *
- * Two layers:
- * 1. An always-animated Ken Burns poster (CSS transform). CSS transforms keep
- *    running in Low Power Mode, so the majority of mobile users (often on
- *    battery saver) still get cinematic motion.
- * 2. The video, on top, which fades in ONLY once it is genuinely playing
- *    (first timeupdate with currentTime > 0). When autoplay is blocked the
- *    video never reveals and the animated poster carries the hero. This also
- *    fixes the earlier iOS Safari bug (canplay was unreliable).
+ * Three layers, chosen at runtime:
+ * 1. Static poster (instant, always present underneath).
+ * 2. The <video>, revealed only once it is genuinely playing.
+ * 3. An animated WebP fallback: if video autoplay is blocked or never starts
+ *    (iOS Low Power Mode), we swap to an animated image, which the browser
+ *    plays as an image and is NOT subject to the autoplay policy. So the hero
+ *    still moves in Low Power Mode.
  *
- * The clip is encoded for maximum compatibility: H.264 Main@3.1, 720x1280,
- * yuv420p, faststart, no audio (~1.6MB).
+ * Freeze fix: iOS pauses background video after a few seconds to save power and
+ * does not resume it. We re-issue play() on the `pause` event, when the tab
+ * becomes visible again, and on a low-frequency interval, so it never stays
+ * frozen.
  */
 export function HeroBackgroundVideo() {
   const ref = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState<Mode>('poster');
+  const intendPlay = useRef(false);
 
   useEffect(() => {
     const v = ref.current;
@@ -32,38 +36,88 @@ export function HeroBackgroundVideo() {
     v.defaultMuted = true;
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      // Respect reduced motion: no playback, the static poster shows.
       v.removeAttribute('autoplay');
       v.pause();
-      return;
+      return; // keep the static poster, no motion
     }
 
-    // Belt-and-suspenders: some engines need an explicit play() even with the
-    // autoplay attribute present. Harmless if autoplay is blocked.
+    intendPlay.current = true;
+    let settled = false;
+    const goVideo = () => {
+      if (!settled) {
+        settled = true;
+        setMode('video');
+      }
+    };
+    const goWebp = () => {
+      if (!settled) {
+        settled = true;
+        intendPlay.current = false; // stop trying to resume a blocked video
+        setMode('webp');
+      }
+    };
+
+    const onTime = () => {
+      if (v.currentTime > 0) goVideo();
+    };
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('playing', goVideo);
+
     const p = v.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (p && typeof p.catch === 'function') p.catch(() => goWebp());
+
+    // If it has not actually started shortly after mount, autoplay is blocked
+    // (iOS Low Power Mode): use the animated image instead.
+    const fallbackTimer = window.setTimeout(() => {
+      if (!settled && (v.paused || v.currentTime === 0)) goWebp();
+    }, 1600);
+
+    // Freeze fix: resume playback whenever it gets paused while it should run.
+    const resume = () => {
+      if (intendPlay.current && !document.hidden && v.paused) v.play().catch(() => {});
+    };
+    v.addEventListener('pause', resume);
+    document.addEventListener('visibilitychange', resume);
+    const keepAlive = window.setInterval(resume, 2500);
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      window.clearInterval(keepAlive);
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('playing', goVideo);
+      v.removeEventListener('pause', resume);
+      document.removeEventListener('visibilitychange', resume);
+    };
   }, []);
 
   return (
     <div aria-hidden className="absolute inset-0 overflow-hidden">
-      {/* Always-animated poster: alive even when video autoplay is blocked. */}
+      {/* Animated poster (Ken Burns): alive even before/without playback. */}
       <div
         className="kenburns absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: 'url(/video_fondo_poster.jpg)' }}
       />
-      {/* Video enhancement: fades in only once it is truly playing. */}
+      {/* Animated WebP: motion fallback for browsers that block video autoplay
+          (iOS Low Power Mode). It plays as an image, no autoplay policy. */}
+      {mode === 'webp' && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/video_fondo.webp"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 size-full object-cover"
+        />
+      )}
+      {/* Video: revealed only once it is truly playing. */}
       <video
         ref={ref}
-        className="absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-out"
-        style={{ opacity: playing ? 1 : 0 }}
+        className="absolute inset-0 size-full object-cover transition-opacity duration-700 ease-out"
+        style={{ opacity: mode === 'video' ? 1 : 0 }}
         autoPlay
         muted
         loop
         playsInline
         preload="auto"
-        onTimeUpdate={(e) => {
-          if (e.currentTarget.currentTime > 0) setPlaying(true);
-        }}
       >
         <source src="/video_fondo.mp4" type="video/mp4" />
       </video>

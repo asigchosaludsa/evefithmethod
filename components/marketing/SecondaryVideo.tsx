@@ -2,36 +2,76 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+type Mode = 'poster' | 'video' | 'webp';
+
 /**
- * Full-width secondary video band. Mirrors HeroBackgroundVideo's resilient
- * playback: an always-animated Ken Burns poster carries the band even when the
- * OS blocks autoplay (iOS Low Power Mode), and the video fades in on top only
- * once it is genuinely playing (first timeupdate with currentTime > 0).
- * Reduced-motion users get the static poster.
+ * Full-width secondary video band. Same resilient playback as
+ * HeroBackgroundVideo: poster -> video when it truly plays -> animated WebP
+ * fallback when autoplay is blocked (iOS Low Power Mode), plus auto-resume so
+ * iOS does not leave it frozen. Reduced-motion users get the static poster.
  */
 export function SecondaryVideo() {
   const ref = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState<Mode>('poster');
+  const intendPlay = useRef(false);
 
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
 
-    // Force the muted DOM property (not just the attribute) for iOS autoplay.
     v.muted = true;
     v.defaultMuted = true;
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      // Respect reduced motion: no playback, the static poster shows.
       v.removeAttribute('autoplay');
       v.pause();
       return;
     }
 
-    // Belt-and-suspenders: some engines need an explicit play() even with the
-    // autoplay attribute present. Harmless if autoplay is blocked.
+    intendPlay.current = true;
+    let settled = false;
+    const goVideo = () => {
+      if (!settled) {
+        settled = true;
+        setMode('video');
+      }
+    };
+    const goWebp = () => {
+      if (!settled) {
+        settled = true;
+        intendPlay.current = false;
+        setMode('webp');
+      }
+    };
+
+    const onTime = () => {
+      if (v.currentTime > 0) goVideo();
+    };
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('playing', goVideo);
+
     const p = v.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (p && typeof p.catch === 'function') p.catch(() => goWebp());
+
+    const fallbackTimer = window.setTimeout(() => {
+      if (!settled && (v.paused || v.currentTime === 0)) goWebp();
+    }, 1600);
+
+    const resume = () => {
+      if (intendPlay.current && !document.hidden && v.paused) v.play().catch(() => {});
+    };
+    v.addEventListener('pause', resume);
+    document.addEventListener('visibilitychange', resume);
+    const keepAlive = window.setInterval(resume, 2500);
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      window.clearInterval(keepAlive);
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('playing', goVideo);
+      v.removeEventListener('pause', resume);
+      document.removeEventListener('visibilitychange', resume);
+    };
   }, []);
 
   return (
@@ -42,20 +82,27 @@ export function SecondaryVideo() {
         className="kenburns absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: 'url(/video_ivifit_poster.jpg)' }}
       />
-      {/* Video enhancement: fades in only once it is truly playing. */}
+      {/* Animated WebP motion fallback for iOS Low Power Mode (plays as image). */}
+      {mode === 'webp' && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/video_ivifit.webp"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 size-full object-cover"
+        />
+      )}
+      {/* Video: revealed only once it is truly playing. */}
       <video
         ref={ref}
         aria-hidden
         className="absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-out"
-        style={{ opacity: playing ? 1 : 0 }}
+        style={{ opacity: mode === 'video' ? 1 : 0 }}
         autoPlay
         muted
         loop
         playsInline
         preload="auto"
-        onTimeUpdate={(e) => {
-          if (e.currentTarget.currentTime > 0) setPlaying(true);
-        }}
       >
         <source src="/video_ivifit.mp4" type="video/mp4" />
       </video>
