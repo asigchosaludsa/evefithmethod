@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/utils/compress-image';
+import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { updateAvatar } from '@/lib/student/photo-actions';
 import { Button } from '@/components/common';
 
@@ -30,15 +30,20 @@ export function AvatarUpload({
     setBusy(true);
     try {
       const blob = await compressImage(file);
+      const info = uploadInfoFor(blob);
+      if (!info) {
+        setError('No pudimos procesar la imagen. Intenta con una foto JPG, PNG o WEBP.');
+        return;
+      }
       if (blob.size > 6 * 1024 * 1024) {
         setError('La imagen es demasiado grande.');
         return;
       }
       const supabase = createClient();
-      const path = `${userId}/avatar.jpg`;
+      const path = `${userId}/avatar.${info.ext}`;
       const { error: upErr } = await supabase.storage
         .from('avatars')
-        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+        .upload(path, blob, { contentType: info.contentType, upsert: true });
       if (upErr) {
         setError(upErr.message);
         return;

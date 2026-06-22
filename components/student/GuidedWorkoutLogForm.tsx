@@ -13,6 +13,7 @@ interface SetState {
   completed: boolean;
 }
 interface ExBlock {
+  key: string;
   exerciseId: string | null;
   name: string;
   targetReps: string;
@@ -25,9 +26,10 @@ interface ExBlock {
 
 function buildBlocks(day: PlanDay | undefined): ExBlock[] {
   if (!day) return [];
-  return day.exercises.map((ex) => {
+  return day.exercises.map((ex, bi) => {
     const defaultReps = ex.reps.match(/\d+/)?.[0] ?? '';
     return {
+      key: ex.id ?? String(bi),
       exerciseId: ex.exercise_id,
       name: ex.exercise_name,
       targetReps: ex.reps,
@@ -131,7 +133,7 @@ export function GuidedWorkoutLogForm({
 
       <div className="space-y-4">
         {blocks.map((b, bi) => (
-          <div key={`${b.exerciseId}-${bi}`} className="rounded-lg border border-hairline bg-canvas/40 p-3">
+          <div key={b.key} className="rounded-lg border border-hairline bg-canvas/40 p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-medium text-foreground">{b.name}</p>
@@ -144,7 +146,7 @@ export function GuidedWorkoutLogForm({
               {b.videoUrl && (
                 <button
                   type="button"
-                  onClick={() => setOpenVideo(openVideo === b.name ? null : b.name)}
+                  onClick={() => setOpenVideo(openVideo === b.key ? null : b.key)}
                   className="inline-flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
                 >
                   <PlayCircle className="size-4" /> Técnica
@@ -152,7 +154,7 @@ export function GuidedWorkoutLogForm({
               )}
             </div>
 
-            {b.videoUrl && openVideo === b.name && (
+            {b.videoUrl && openVideo === b.key && (
               <div className="mt-3">
                 <YouTubeEmbed url={b.videoUrl} title={`Técnica: ${b.name}`} />
               </div>

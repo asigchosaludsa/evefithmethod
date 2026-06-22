@@ -52,3 +52,21 @@ export async function compressImage(
     return file;
   }
 }
+
+/**
+ * Maps a compressed blob's MIME type to the file extension and content type we
+ * should use when uploading to Supabase Storage.
+ *
+ * compressImage returns image/jpeg on success, but on fallback it returns the
+ * original file untouched, which may be a format the bucket cannot serve (e.g.
+ * an iOS HEIC that the browser could not decode). Returning null lets the
+ * caller reject those instead of storing bytes under a misleading type.
+ */
+export function uploadInfoFor(blob: Blob): { ext: 'jpg' | 'png' | 'webp'; contentType: string } | null {
+  switch (blob.type) {
+    case 'image/jpeg': return { ext: 'jpg', contentType: 'image/jpeg' };
+    case 'image/png': return { ext: 'png', contentType: 'image/png' };
+    case 'image/webp': return { ext: 'webp', contentType: 'image/webp' };
+    default: return null; // unsupported (e.g. HEIC fallback) -> caller must reject
+  }
+}

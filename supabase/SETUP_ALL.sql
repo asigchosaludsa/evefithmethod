@@ -1,7 +1,10 @@
 -- ============================================================
--- EveFit Method — SETUP COMPLETO (generado desde migrations/)
--- Pega TODO este archivo en el SQL Editor de Supabase y ejecútalo UNA vez.
--- Ejecuta seed.sql aparte (opcional) después de crear tu primera coach.
+-- EveFit Method, SETUP PARCIAL (solo migraciones 0001-0006).
+-- ATENCION: este archivo esta DESACTUALIZADO y NO incluye 0007-0012
+-- (rate limiting, leads, plantillas, catalogo de ejercicios, split_type, etc).
+-- Camino canonico: aplica en orden los archivos numerados de migrations/
+-- (0001 ... 0012) en el SQL Editor de Supabase, NO este archivo.
+-- Ejecuta seed.sql aparte (opcional) despues de crear tu primera coach.
 -- ============================================================
 
 -- Permite crear funciones que referencian tablas creadas más abajo.

@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/utils/compress-image';
+import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { saveProgressPhoto } from '@/lib/student/photo-actions';
 import { Button, Select } from '@/components/common';
 import type { PhotoType } from '@/types/app';
@@ -30,15 +30,20 @@ export function ProgressPhotoUpload({ userId }: { userId: string }) {
     setBusy(true);
     try {
       const blob = await compressImage(file);
+      const info = uploadInfoFor(blob);
+      if (!info) {
+        setError('No pudimos procesar la imagen. Intenta con una foto JPG, PNG o WEBP.');
+        return;
+      }
       if (blob.size > 6 * 1024 * 1024) {
         setError('La imagen es demasiado grande.');
         return;
       }
       const supabase = createClient();
-      const path = `${userId}/${Date.now()}.jpg`;
+      const path = `${userId}/${Date.now()}.${info.ext}`;
       const { error: upErr } = await supabase.storage
         .from('progress-photos')
-        .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        .upload(path, blob, { contentType: info.contentType, upsert: false });
       if (upErr) {
         setError(upErr.message);
         return;

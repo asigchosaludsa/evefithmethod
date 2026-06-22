@@ -73,7 +73,7 @@ export async function getWorkoutPlanContent(planId: string): Promise<WorkoutPlan
       id: pe.id,
       workout_plan_day_id: pe.workout_plan_day_id,
       exercise_id: pe.exercise_id,
-      exercise_name: ex?.name ?? 'Ejercicio',
+      exercise_name: ex?.name ?? 'Ejercicio (eliminado)',
       muscle_group: ex?.muscle_group ?? null,
       equipment: ex?.equipment ?? null,
       difficulty: ex?.difficulty ?? null,

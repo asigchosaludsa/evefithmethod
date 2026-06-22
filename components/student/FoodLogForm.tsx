@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, Check, Search, Trash2 } from 'lucide-react';
 import { logFood } from '@/lib/student/actions';
 import { createClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/utils/compress-image';
+import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/calculations';
 import { Button, FormField, Input, Select, Textarea } from '@/components/common';
 import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
@@ -54,15 +54,20 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
     setPhotoBusy(true);
     try {
       const blob = await compressImage(file);
+      const info = uploadInfoFor(blob);
+      if (!info) {
+        setError('No pudimos procesar la imagen. Intenta con una foto JPG, PNG o WEBP.');
+        return;
+      }
       if (blob.size > 6 * 1024 * 1024) {
         setError('La foto es demasiado grande.');
         return;
       }
       const supabase = createClient();
-      const path = `${userId}/${Date.now()}.jpg`;
+      const path = `${userId}/${Date.now()}.${info.ext}`;
       const { error: upErr } = await supabase.storage
         .from('food-photos')
-        .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        .upload(path, blob, { contentType: info.contentType, upsert: false });
       if (upErr) setError(upErr.message);
       else setPhotoPath(path);
     } finally {

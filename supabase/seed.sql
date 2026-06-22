@@ -31,13 +31,13 @@ on conflict do nothing;
 insert into public.exercises (name, muscle_group, equipment, description, status, is_global)
 values
   ('Hip Thrust', 'Glúteos', 'Barra', 'Empuje de cadera para glúteos.', 'published', true),
-  ('Sentadilla Goblet', 'Cuádriceps', 'Mancuerna', 'Sentadilla sujetando una mancuerna al pecho.', 'published', true),
-  ('Peso Muerto Rumano', 'Femorales', 'Barra', 'Bisagra de cadera con rodillas semiflexionadas.', 'published', true),
+  ('Sentadilla Goblet', 'Cuádriceps', 'Mancuernas', 'Sentadilla sujetando una mancuerna al pecho.', 'published', true),
+  ('Peso Muerto Rumano', 'Femoral', 'Barra', 'Bisagra de cadera con rodillas semiflexionadas.', 'published', true),
   ('Prensa', 'Cuádriceps', 'Máquina', 'Empuje de piernas en máquina de prensa.', 'published', true),
-  ('Remo con Mancuerna', 'Espalda', 'Mancuerna', 'Remo a una mano apoyada en banco.', 'published', true),
+  ('Remo con Mancuerna', 'Espalda', 'Mancuernas', 'Remo a una mano apoyada en banco.', 'published', true),
   ('Press de Hombro', 'Hombros', 'Mancuernas', 'Press vertical de hombros.', 'published', true),
   ('Jalón al Pecho', 'Espalda', 'Polea', 'Jalón en polea alta hacia el pecho.', 'published', true),
-  ('Curl Femoral', 'Femorales', 'Máquina', 'Flexión de rodilla en máquina.', 'published', true),
+  ('Curl Femoral', 'Femoral', 'Máquina', 'Flexión de rodilla en máquina.', 'published', true),
   ('Abducción de Cadera', 'Glúteos', 'Máquina', 'Apertura de piernas en máquina.', 'published', true),
   ('Plancha', 'Core', 'Peso corporal', 'Isometría de core en posición de plancha.', 'published', true)
 on conflict do nothing;

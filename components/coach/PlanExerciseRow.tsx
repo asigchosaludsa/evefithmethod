@@ -79,7 +79,7 @@ export function PlanExerciseRow({ ex, planId }: { ex: Row; planId: string }) {
         </button>
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        <Field label="Series" type="number" value={form.sets} onChange={(v) => setForm({ ...form, sets: v })} />
+        <Field label="Series" type="number" integer value={form.sets} onChange={(v) => setForm({ ...form, sets: v })} />
         <Field label="Reps" value={form.reps} onChange={(v) => setForm({ ...form, reps: v })} />
         <Field label="Peso kg" type="number" value={form.suggested_weight_kg} onChange={(v) => setForm({ ...form, suggested_weight_kg: v })} />
         <Field label="Desc. s" type="number" value={form.rest_seconds} onChange={(v) => setForm({ ...form, rest_seconds: v })} />
@@ -99,19 +99,21 @@ function Field({
   value,
   onChange,
   type = 'text',
+  integer = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  integer?: boolean;
 }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] uppercase tracking-wide text-faint">{label}</span>
       <input
         type={type}
-        inputMode={type === 'number' ? 'decimal' : undefined}
-        step={type === 'number' ? '0.1' : undefined}
+        inputMode={type === 'number' ? (integer ? 'numeric' : 'decimal') : undefined}
+        step={type === 'number' ? (integer ? '1' : '0.1') : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-9 w-full rounded-md border border-border bg-canvas px-2 text-sm text-foreground focus:border-primary focus:outline-none"

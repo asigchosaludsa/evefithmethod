@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from 'react';
 import { Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/utils/compress-image';
+import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { createExercise, updateExercise } from '@/lib/coach/actions';
 import { initialActionState } from '@/lib/auth/action-state';
 import {
@@ -31,15 +31,20 @@ export function ExerciseForm({ coachId, exercise }: { coachId: string; exercise?
     setBusy(true);
     try {
       const blob = await compressImage(file);
+      const info = uploadInfoFor(blob);
+      if (!info) {
+        setImgError('No pudimos procesar la imagen. Intenta con una foto JPG, PNG o WEBP.');
+        return;
+      }
       if (blob.size > 5 * 1024 * 1024) {
         setImgError('La imagen es demasiado grande (máx 5MB).');
         return;
       }
       const supabase = createClient();
-      const path = `${coachId}/${crypto.randomUUID()}.jpg`;
+      const path = `${coachId}/${crypto.randomUUID()}.${info.ext}`;
       const { error } = await supabase.storage
         .from('exercise-images')
-        .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        .upload(path, blob, { contentType: info.contentType, upsert: false });
       if (error) {
         setImgError(error.message);
         return;

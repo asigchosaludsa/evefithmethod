@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
@@ -17,22 +16,6 @@ import { resolveSplitDays } from '@/domain/workouts/splits';
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? 'Revisa los datos ingresados.';
 }
-
-// Bounds for the numeric fields of a plan exercise (defense against negatives / NaN / huge values).
-const planExerciseNumbersSchema = z.object({
-  sets: z.number().int('Las series deben ser un número entero').min(1, 'Mínimo 1 serie').max(20, 'Máximo 20 series'),
-  rest_seconds: z
-    .number()
-    .int('El descanso debe ser un número entero')
-    .min(0, 'El descanso no puede ser negativo')
-    .max(3600, 'El descanso máximo es 3600 segundos')
-    .nullable(),
-  suggested_weight_kg: z
-    .number()
-    .min(0, 'El peso no puede ser negativo')
-    .max(1000, 'El peso máximo es 1000 kg')
-    .nullable(),
-});
 
 // ---- Coach notes ----
 export async function addCoachNote(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -475,8 +458,7 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
   const coach = await requireCoach();
   const dayId = String(formData.get('workout_plan_day_id') ?? '');
   const planId = String(formData.get('workout_plan_id') ?? '');
-  const exerciseId = String(formData.get('exercise_id') ?? '') || null;
-  if (!dayId || !exerciseId) return { error: 'Selecciona un ejercicio' };
+  if (!dayId) return { error: 'Selecciona un día' };
 
   const supabase = await createClient();
   const { data: day } = await supabase
@@ -492,15 +474,17 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
     .maybeSingle();
   if (!plan || plan.coach_id !== coach.id) return { error: 'No autorizado' };
 
-  const setsRaw = formData.get('sets');
-  const restRaw = formData.get('rest_seconds');
-  const weightRaw = formData.get('suggested_weight_kg');
-  const numbers = planExerciseNumbersSchema.safeParse({
-    sets: setsRaw ? Number(setsRaw) : 3,
-    rest_seconds: restRaw ? Number(restRaw) : null,
-    suggested_weight_kg: weightRaw ? Number(weightRaw) : null,
+  const parsed = planExerciseItemSchema.safeParse({
+    exercise_id: String(formData.get('exercise_id') ?? ''),
+    sets: formData.get('sets') ?? undefined,
+    reps: formData.get('reps') ?? undefined,
+    rest_seconds: formData.get('rest_seconds') || null,
+    tempo: String(formData.get('tempo') ?? '').trim() || null,
+    suggested_weight_kg: formData.get('suggested_weight_kg') || null,
+    notes: String(formData.get('notes') ?? '').trim() || null,
   });
-  if (!numbers.success) return { error: firstError(numbers.error.issues) };
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+  const item = parsed.data;
 
   const { data: last } = await supabase
     .from('workout_plan_exercises')
@@ -512,14 +496,14 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
 
   const { error } = await supabase.from('workout_plan_exercises').insert({
     workout_plan_day_id: dayId,
-    exercise_id: exerciseId,
+    exercise_id: item.exercise_id,
     sort_order: sortOrder,
-    sets: numbers.data.sets,
-    reps: String(formData.get('reps') ?? '10').trim() || '10',
-    rest_seconds: numbers.data.rest_seconds,
-    tempo: String(formData.get('tempo') ?? '').trim() || null,
-    suggested_weight_kg: numbers.data.suggested_weight_kg,
-    notes: String(formData.get('notes') ?? '').trim() || null,
+    sets: item.sets,
+    reps: item.reps,
+    rest_seconds: item.rest_seconds ?? null,
+    tempo: item.tempo ?? null,
+    suggested_weight_kg: item.suggested_weight_kg ?? null,
+    notes: item.notes ?? null,
   });
   if (error) return { error: error.message };
   revalidatePath(`/coach/workouts/plans/${planId}`);
