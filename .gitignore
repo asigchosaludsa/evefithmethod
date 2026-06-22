@@ -52,3 +52,5 @@ Thumbs.db
 
 # Local media source (hosted on Supabase Storage, NOT committed)
 /media/
+
+.vercel
