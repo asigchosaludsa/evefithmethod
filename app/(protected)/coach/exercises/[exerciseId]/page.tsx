@@ -28,9 +28,15 @@ export default async function ExerciseDetailPage({
         title={e.name}
         description={[e.muscle_group, e.equipment].filter(Boolean).join(' · ') || undefined}
         actions={
-          canEdit ? (
-            <ArchiveItemButton id={e.id} kind="exercise" archived={e.status === 'archived'} />
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/coach/exercises/${e.id}/edit`}
+              className="inline-flex h-9 items-center gap-1 rounded-md border border-border px-3 text-sm text-foreground hover:bg-elevated"
+            >
+              Editar
+            </Link>
+            {canEdit && <ArchiveItemButton id={e.id} kind="exercise" archived={e.status === 'archived'} />}
+          </div>
         }
       />
       <div className="flex flex-wrap items-center gap-2">
