@@ -319,12 +319,26 @@ Después del despliegue: actualizar Site URL + Redirect URLs en Supabase al domi
 - Prevenir la escalada de rol.
 - Sanitizar el contenido de la coach.
 
+### Estado de despliegue (actualizado)
+
+- **Desplegado en Vercel** (proyecto `eve-fit-method/evefitmethod`), dominio en vivo **`evefitmethod.com`** + `www`.
+- Variables de entorno configuradas en Vercel (Production). Site URL + Redirect URLs ya actualizadas en Supabase al dominio real.
+- **Pasada de seguridad aplicada** (auditoría con 4 agentes; 0 críticos explotables):
+  - Headers HTTP en `next.config.ts`: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy.
+  - Rate limiting propio respaldado en Postgres (`lib/security/rate-limit.ts` + migración `0008_rate_limiting.sql`, fail-open) en login, registro, reset y aceptación de invitación.
+  - Filtros de propiedad (`coach_id` / `student_id`) explícitos en mutaciones que antes dependían solo de RLS.
+  - Validación Zod en `logFood`/`logWorkout`, topes en `createCustomFood`/`addPlanExercise`, `video_url` solo http(s), validación de URL de avatar y rutas de fotos.
+  - Límites de tamaño/MIME server-side en buckets (`0007_storage_limits.sql`).
+
 ### Pendientes antes de producción
 
-- [ ] Rate limiting + CAPTCHA en auth.
-- [ ] SMTP personalizado.
+- [ ] **Aplicar migraciones `0007_storage_limits.sql` y `0008_rate_limiting.sql`** en el editor SQL de Supabase (EN ORDEN). El rate limiting hace fail-open hasta que se aplique `0008`.
+- [ ] Activar **CAPTCHA** de Supabase (Authentication > Attack Protection) como complemento al rate limiting.
+- [ ] **SMTP personalizado** (correos transaccionales en producción).
+- [ ] **OAuth** Google/Facebook/Apple (configuración en cada proveedor + Supabase).
+- [ ] Rotar `SUPABASE_SECRET_KEY` (la clave pasó por el chat). **Aplazado por decisión de la dueña.**
 - [ ] Revisar los textos legales.
-- [ ] Revisar 2 advisories moderados de `npm audit`.
+- [ ] Revisar advisories moderados de `npm audit`.
 
 ---
 
