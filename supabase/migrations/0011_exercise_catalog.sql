@@ -43,8 +43,10 @@ values ('exercise-images', 'exercise-images', true, 5242880,
         array['image/jpeg','image/png','image/webp'])
 on conflict (id) do nothing;
 
+drop policy if exists "exercise-images public read" on storage.objects;
 create policy "exercise-images public read" on storage.objects for select to public
   using (bucket_id = 'exercise-images');
+drop policy if exists "exercise-images owner write" on storage.objects;
 create policy "exercise-images owner write" on storage.objects for all to authenticated
   using (
     bucket_id = 'exercise-images'
