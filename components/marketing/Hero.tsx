@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/common';
 import { AppMockupHero } from './AppMockupHero';
+import { HeroBackgroundVideo } from './HeroBackgroundVideo';
 
 const WORDS = ['método', 'fuerza', 'disciplina', 'constancia'];
 
@@ -25,10 +26,11 @@ export function Hero() {
 
   return (
     <section className="relative overflow-hidden">
-      {/* Living background */}
+      {/* Living background: premium video (poster-first) + scarlet glow + grid */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
+        <HeroBackgroundVideo />
         <div
-          className="aurora absolute left-1/2 top-[-22%] h-[62vh] w-[62vh] -translate-x-1/2 rounded-full"
+          className="aurora absolute left-1/2 top-[-22%] h-[55vh] w-[55vh] -translate-x-1/2 rounded-full opacity-70 mix-blend-screen"
           style={{
             background:
               'radial-gradient(circle, color-mix(in oklab, var(--color-primary) 40%, transparent), transparent 64%)',

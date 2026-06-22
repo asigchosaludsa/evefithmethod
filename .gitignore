@@ -49,3 +49,6 @@ Thumbs.db
 
 # Brainstorming visual companion (local only)
 .superpowers/
+
+# Local media source (hosted on Supabase Storage, NOT committed)
+/media/
