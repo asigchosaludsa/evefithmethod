@@ -1,23 +1,29 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Premium hero background video. Poster shows instantly (page never blocked);
- * the small (~3MB) compressed clip fades in once it can play. Reduced-motion
- * users get the static poster, no playback.
+ * Premium hero background video, built for reliable inline autoplay on iOS
+ * Safari (which is stricter than iOS Chrome).
  *
- * iOS Safari notes:
+ * Why this shape:
+ * - The canonical iOS autoplay recipe needs ALL of: the `autoplay` ATTRIBUTE,
+ *   `muted`, `playsInline`, `loop`. Relying only on an imperative play() call
+ *   is more easily blocked by Safari's autoplay policy.
  * - React does not reliably mirror the `muted` attribute to the muted DOM
- *   *property*, and Safari refuses to autoplay unless the property is true.
- *   We set it imperatively below.
- * - Safari can defer preload and never fire `canplay`, which would leave the
- *   opacity-0 video invisible forever. We reveal on several readiness events
- *   plus a timeout fallback so the hero is never blank.
+ *   *property*; Safari refuses to autoplay unless the property is true, so we
+ *   set it imperatively below.
+ * - Visibility is NOT gated on JS events. Earlier the video started at
+ *   opacity 0 and only revealed onCanPlay, an event iOS Safari may never fire
+ *   with deferred preload, leaving the hero blank forever. Now the element is
+ *   visible by default (`.bgvideo`); the poster shows instantly even if
+ *   autoplay is blocked (e.g. Low Power Mode), and the fade is a pure-CSS
+ *   enhancement.
+ * - The clip is encoded for maximum compatibility: H.264 Main@3.1, 720x1280,
+ *   yuv420p, faststart, no audio (~1.6MB).
  */
 export function HeroBackgroundVideo() {
   const ref = useRef<HTMLVideoElement>(null);
-  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const v = ref.current;
@@ -27,34 +33,33 @@ export function HeroBackgroundVideo() {
     v.muted = true;
     v.defaultMuted = true;
 
-    // Don't autoplay for reduced-motion users; the poster/first frame still
-    // shows (revealed by the fallback timeout) without motion.
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const p = v.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // Respect reduced motion: stop playback, leave the static poster/frame.
+      v.removeAttribute('autoplay');
+      v.pause();
+      return;
     }
 
-    // Guarantee the reveal even if no readiness event fires (iOS Safari).
-    const t = window.setTimeout(() => setShown(true), 1200);
-    return () => window.clearTimeout(t);
+    // Belt-and-suspenders: some engines still need an explicit play() even
+    // with the autoplay attribute present.
+    const p = v.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
   }, []);
 
   return (
     <div aria-hidden className="absolute inset-0 overflow-hidden">
       <video
         ref={ref}
-        className="size-full object-cover transition-opacity duration-1000 ease-out"
-        style={{ opacity: shown ? 1 : 0 }}
-        src="/video_fondo.mp4"
+        className="bgvideo size-full object-cover"
         poster="/video_fondo_poster.jpg"
+        autoPlay
         muted
         loop
         playsInline
         preload="auto"
-        onLoadedData={() => setShown(true)}
-        onCanPlay={() => setShown(true)}
-        onPlaying={() => setShown(true)}
-      />
+      >
+        <source src="/video_fondo.mp4" type="video/mp4" />
+      </video>
       {/* Readability + brand wash */}
       <div className="absolute inset-0 bg-canvas/72" />
       <div

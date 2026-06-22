@@ -15,11 +15,11 @@ export interface NewFood {
 }
 
 const schema = z.object({
-  name: z.string().min(1, 'El nombre es obligatorio.'),
-  calories: z.coerce.number().min(0, 'Las calorías no pueden ser negativas.'),
-  protein: z.coerce.number().min(0, 'La proteína no puede ser negativa.'),
-  carbs: z.coerce.number().min(0, 'Los carbohidratos no pueden ser negativos.'),
-  fat: z.coerce.number().min(0, 'Las grasas no pueden ser negativas.'),
+  name: z.string().min(1, 'El nombre es obligatorio.').max(120, 'El nombre es demasiado largo.'),
+  calories: z.coerce.number().min(0, 'Las calorías no pueden ser negativas.').max(2000, 'Las calorías por 100g son demasiado altas.'),
+  protein: z.coerce.number().min(0, 'La proteína no puede ser negativa.').max(1000, 'La proteína por 100g es demasiado alta.'),
+  carbs: z.coerce.number().min(0, 'Los carbohidratos no pueden ser negativos.').max(1000, 'Los carbohidratos por 100g son demasiado altos.'),
+  fat: z.coerce.number().min(0, 'Las grasas no pueden ser negativas.').max(1000, 'Las grasas por 100g son demasiado altas.'),
 });
 
 export async function createCustomFood(input: {

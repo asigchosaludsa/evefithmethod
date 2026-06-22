@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
 import type { ActionState } from '@/lib/auth/action-state';
@@ -12,6 +13,22 @@ import { workoutPlanSchema } from '@/domain/workouts/schemas';
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? 'Revisa los datos ingresados.';
 }
+
+// Bounds for the numeric fields of a plan exercise (defense against negatives / NaN / huge values).
+const planExerciseNumbersSchema = z.object({
+  sets: z.number().int('Las series deben ser un número entero').min(1, 'Mínimo 1 serie').max(20, 'Máximo 20 series'),
+  rest_seconds: z
+    .number()
+    .int('El descanso debe ser un número entero')
+    .min(0, 'El descanso no puede ser negativo')
+    .max(3600, 'El descanso máximo es 3600 segundos')
+    .nullable(),
+  suggested_weight_kg: z
+    .number()
+    .min(0, 'El peso no puede ser negativo')
+    .max(1000, 'El peso máximo es 1000 kg')
+    .nullable(),
+});
 
 // ---- Coach notes ----
 export async function addCoachNote(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -37,9 +54,9 @@ export async function addCoachNote(_prev: ActionState, formData: FormData): Prom
 }
 
 export async function deleteCoachNote(noteId: string, studentId: string): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
-  await supabase.from('coach_notes').delete().eq('id', noteId);
+  await supabase.from('coach_notes').delete().eq('id', noteId).eq('coach_id', coach.id);
   revalidatePath(`/coach/students/${studentId}`);
 }
 
@@ -48,19 +65,24 @@ export async function reviewFoodLog(
   foodLogId: string,
   status: 'reviewed' | 'flagged' | 'pending',
 ): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
-  await supabase.from('food_logs').update({ coach_review_status: status }).eq('id', foodLogId);
+  await supabase
+    .from('food_logs')
+    .update({ coach_review_status: status })
+    .eq('id', foodLogId)
+    .eq('coach_id', coach.id);
   revalidatePath('/coach', 'layout');
 }
 
 export async function resolveAlert(alertId: string): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
   await supabase
     .from('alerts')
     .update({ status: 'resolved', resolved_at: new Date().toISOString() })
-    .eq('id', alertId);
+    .eq('id', alertId)
+    .eq('coach_id', coach.id);
   revalidatePath('/coach');
 }
 
@@ -161,9 +183,13 @@ export async function createExercise(_prev: ActionState, formData: FormData): Pr
 }
 
 export async function archiveExercise(exerciseId: string): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
-  await supabase.from('exercises').update({ status: 'archived' }).eq('id', exerciseId);
+  await supabase
+    .from('exercises')
+    .update({ status: 'archived' })
+    .eq('id', exerciseId)
+    .eq('coach_id', coach.id);
   revalidatePath('/coach/exercises');
 }
 
@@ -246,9 +272,19 @@ export async function addWorkoutDay(_prev: ActionState, formData: FormData): Pro
 }
 
 export async function deleteWorkoutDay(dayId: string, planId: string): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
-  await supabase.from('workout_plan_days').delete().eq('id', dayId);
+  const { data: plan } = await supabase
+    .from('workout_plans')
+    .select('coach_id')
+    .eq('id', planId)
+    .maybeSingle();
+  if (!plan || plan.coach_id !== coach.id) return;
+  await supabase
+    .from('workout_plan_days')
+    .delete()
+    .eq('id', dayId)
+    .eq('workout_plan_id', planId);
   revalidatePath(`/coach/workouts/plans/${planId}`);
 }
 
@@ -273,6 +309,16 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
     .maybeSingle();
   if (!plan || plan.coach_id !== coach.id) return { error: 'No autorizado' };
 
+  const setsRaw = formData.get('sets');
+  const restRaw = formData.get('rest_seconds');
+  const weightRaw = formData.get('suggested_weight_kg');
+  const numbers = planExerciseNumbersSchema.safeParse({
+    sets: setsRaw ? Number(setsRaw) : 3,
+    rest_seconds: restRaw ? Number(restRaw) : null,
+    suggested_weight_kg: weightRaw ? Number(weightRaw) : null,
+  });
+  if (!numbers.success) return { error: firstError(numbers.error.issues) };
+
   const { data: last } = await supabase
     .from('workout_plan_exercises')
     .select('sort_order')
@@ -285,13 +331,11 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
     workout_plan_day_id: dayId,
     exercise_id: exerciseId,
     sort_order: sortOrder,
-    sets: Number(formData.get('sets')) || 3,
+    sets: numbers.data.sets,
     reps: String(formData.get('reps') ?? '10').trim() || '10',
-    rest_seconds: formData.get('rest_seconds') ? Number(formData.get('rest_seconds')) : null,
+    rest_seconds: numbers.data.rest_seconds,
     tempo: String(formData.get('tempo') ?? '').trim() || null,
-    suggested_weight_kg: formData.get('suggested_weight_kg')
-      ? Number(formData.get('suggested_weight_kg'))
-      : null,
+    suggested_weight_kg: numbers.data.suggested_weight_kg,
     notes: String(formData.get('notes') ?? '').trim() || null,
   });
   if (error) return { error: error.message };
@@ -300,8 +344,24 @@ export async function addPlanExercise(_prev: ActionState, formData: FormData): P
 }
 
 export async function deletePlanExercise(id: string, planId: string): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
-  await supabase.from('workout_plan_exercises').delete().eq('id', id);
+  const { data: plan } = await supabase
+    .from('workout_plans')
+    .select('coach_id')
+    .eq('id', planId)
+    .maybeSingle();
+  if (!plan || plan.coach_id !== coach.id) return;
+  const { data: days } = await supabase
+    .from('workout_plan_days')
+    .select('id')
+    .eq('workout_plan_id', planId);
+  const dayIds = (days ?? []).map((d) => d.id);
+  if (dayIds.length === 0) return;
+  await supabase
+    .from('workout_plan_exercises')
+    .delete()
+    .eq('id', id)
+    .in('workout_plan_day_id', dayIds);
   revalidatePath(`/coach/workouts/plans/${planId}`);
 }

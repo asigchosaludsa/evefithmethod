@@ -215,6 +215,19 @@ h4,
   animation: floatY 6s var(--ease-in-out) infinite;
 }
 
+/* Hero background video. Visible by default so it is NEVER blank (poster shows
+   instantly even if autoplay is blocked, e.g. iOS Low Power Mode). The fade is
+   a pure-CSS enhancement that does not gate visibility on JS events — iOS
+   Safari does not reliably fire canplay, which previously left it hidden. */
+.bgvideo {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bgvideo {
+    animation: fade 1s var(--ease-out-expo) both;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

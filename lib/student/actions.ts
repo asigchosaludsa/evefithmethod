@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { requireStudent } from '@/lib/auth/roles';
 import { getStudentCoachId } from '@/lib/db/queries/student';
 import { calculateFoodMacros } from '@/domain/nutrition/calculations';
+import { foodLogSchema } from '@/domain/nutrition/schemas';
+import { workoutLogSchema } from '@/domain/workouts/schemas';
 import { weightEntrySchema, bodyMeasurementSchema } from '@/domain/progress/schemas';
 import type { ActionState } from '@/lib/auth/action-state';
 import type { MealType } from '@/types/app';
@@ -23,6 +25,17 @@ export interface LogFoodInput {
 export async function logFood(input: LogFoodInput): Promise<{ error?: string; success?: boolean }> {
   const student = await requireStudent();
   if (!input.items || input.items.length === 0) return { error: 'Agrega al menos un alimento.' };
+
+  const parsed = foodLogSchema.safeParse({
+    meal_type: input.mealType,
+    notes: input.notes || undefined,
+    items: input.items.map((i) => ({ food_item_id: i.foodItemId, grams: i.grams })),
+  });
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  if (input.photoPath && !input.photoPath.startsWith(`${student.id}/`)) {
+    return { error: 'Ruta de foto inválida.' };
+  }
 
   const supabase = await createClient();
   const ids = input.items.map((i) => i.foodItemId);
@@ -80,6 +93,22 @@ export interface LogWorkoutInput {
 
 export async function logWorkout(input: LogWorkoutInput): Promise<{ error?: string; success?: boolean }> {
   const student = await requireStudent();
+
+  const parsed = workoutLogSchema.safeParse({
+    workout_plan_id: input.workoutPlanId ?? null,
+    workout_plan_day_id: input.workoutPlanDayId ?? null,
+    perceived_effort: input.perceivedEffort ?? null,
+    notes: input.notes || undefined,
+    sets: (input.sets ?? []).map((s) => ({
+      exercise_id: s.exerciseId ?? null,
+      set_number: s.setNumber,
+      reps_completed: s.reps ?? null,
+      weight_kg: s.weight ?? null,
+      completed: s.completed,
+    })),
+  });
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
   const supabase = await createClient();
   const coachId = await getStudentCoachId(student.id);
 
@@ -172,9 +201,13 @@ export async function addMeasurement(_prev: ActionState, formData: FormData): Pr
 }
 
 export async function markContentRead(assignmentId: string): Promise<void> {
-  await requireStudent();
+  const student = await requireStudent();
   const supabase = await createClient();
-  await supabase.from('content_assignments').update({ read_at: new Date().toISOString() }).eq('id', assignmentId);
+  await supabase
+    .from('content_assignments')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', assignmentId)
+    .eq('student_id', student.id);
   revalidatePath('/student/content');
 }
 

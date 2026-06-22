@@ -12,6 +12,9 @@ export async function saveProgressPhoto(input: {
   photoType: PhotoType;
 }): Promise<{ error?: string }> {
   const student = await requireStudent();
+  if (!input.path.startsWith(`${student.id}/`)) {
+    return { error: 'Ruta de foto inválida.' };
+  }
   const coachId = await getStudentCoachId(student.id);
   const supabase = await createClient();
   const { error } = await supabase.from('progress_photos').insert({
@@ -29,6 +32,17 @@ export async function saveProgressPhoto(input: {
 /** Save the public avatar URL on the user's profile (any role). */
 export async function updateAvatar(publicUrl: string): Promise<{ error?: string }> {
   const profile = await requireAuth();
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(publicUrl);
+  } catch {
+    return { error: 'URL de avatar inválida.' };
+  }
+  if (parsedUrl.protocol !== 'https:' || !parsedUrl.hostname.endsWith('.supabase.co')) {
+    return { error: 'URL de avatar inválida.' };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id);
   if (error) return { error: error.message };

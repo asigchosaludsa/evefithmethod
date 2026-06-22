@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCoach } from '@/lib/auth/roles';
 import { acceptInvitation, cancelInvitation, createInvitation } from '@/lib/db/mutations/invitations';
 import { acceptInvitationSchema, inviteStudentSchema } from '@/lib/validators/invitation';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import { getURL } from '@/lib/utils/url';
 
 export type AcceptState = { error?: string; success?: boolean; email?: string };
@@ -19,6 +20,10 @@ export async function acceptInvitationAction(formData: FormData): Promise<Accept
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Revisa los datos ingresados.' };
+  }
+
+  if (!(await checkRateLimit('accept-invite', { max: 10, windowSeconds: 600 }))) {
+    return { error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' };
   }
 
   const res = await acceptInvitation({
@@ -62,8 +67,8 @@ export async function inviteStudentAction(_prev: InviteState, formData: FormData
 }
 
 export async function cancelInvitationAction(invitationId: string): Promise<void> {
-  await requireCoach();
-  await cancelInvitation(invitationId);
+  const coach = await requireCoach();
+  await cancelInvitation(invitationId, coach.id);
   revalidatePath('/coach/students');
   revalidatePath('/coach/students/invite');
 }

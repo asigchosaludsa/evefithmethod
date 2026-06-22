@@ -45,12 +45,13 @@ export async function createManualAlert(_prev: ActionState, formData: FormData):
 }
 
 export async function resolveAlertAction(alertId: string, studentId: string): Promise<void> {
-  await requireCoach();
+  const coach = await requireCoach();
   const supabase = await createClient();
   await supabase
     .from('alerts')
     .update({ status: 'resolved', resolved_at: new Date().toISOString() })
-    .eq('id', alertId);
+    .eq('id', alertId)
+    .eq('coach_id', coach.id);
   revalidatePath(`/coach/students/${studentId}`);
   revalidatePath('/coach');
 }

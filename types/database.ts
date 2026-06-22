@@ -729,6 +729,10 @@ export type Database = {
       is_student: { Args: { uid?: string }; Returns: boolean };
       is_admin: { Args: { uid?: string }; Returns: boolean };
       coach_has_student: { Args: { coach: string; student: string }; Returns: boolean };
+      check_rate_limit: {
+        Args: { p_bucket: string; p_max: number; p_window_seconds: number };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

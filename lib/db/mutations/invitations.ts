@@ -104,8 +104,12 @@ export async function acceptInvitation(input: {
   return { success: true, email: inv.email };
 }
 
-/** Cancel a pending invitation (coach action). */
-export async function cancelInvitation(invitationId: string): Promise<void> {
+/** Cancel a pending invitation (coach action). Scoped to the owning coach. */
+export async function cancelInvitation(invitationId: string, coachId: string): Promise<void> {
   const supabase = await createClient();
-  await supabase.from('invitations').update({ status: 'cancelled' }).eq('id', invitationId);
+  await supabase
+    .from('invitations')
+    .update({ status: 'cancelled' })
+    .eq('id', invitationId)
+    .eq('coach_id', coachId);
 }

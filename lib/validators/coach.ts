@@ -13,7 +13,12 @@ export const exerciseSchema = z.object({
   description: z.string().max(2000).optional(),
   instructions: z.string().max(2000).optional(),
   common_mistakes: z.string().max(2000).optional(),
-  video_url: z.union([z.url(), z.literal('')]).optional(),
+  video_url: z
+    .union([
+      z.url().refine((u) => /^https?:\/\//i.test(u), 'Debe ser un enlace http(s) válido'),
+      z.literal(''),
+    ])
+    .optional(),
   status: z.enum(['draft', 'published', 'archived']).default('published'),
 });
 export type ExerciseInput = z.infer<typeof exerciseSchema>;

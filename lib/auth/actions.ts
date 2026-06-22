@@ -6,6 +6,7 @@ import type { Provider } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { getURL } from '@/lib/utils/url';
 import { dashboardPathForProfile } from '@/lib/auth/redirects';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import type { ActionState } from '@/lib/auth/action-state';
 import {
   forgotPasswordSchema,
@@ -25,6 +26,10 @@ export async function signInWithEmail(_prev: ActionState, formData: FormData): P
     password: formData.get('password'),
   });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  if (!(await checkRateLimit('login', { max: 20, windowSeconds: 60 }))) {
+    return { error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
@@ -51,6 +56,10 @@ export async function signUpWithEmail(_prev: ActionState, formData: FormData): P
   });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
 
+  if (!(await checkRateLimit('signup', { max: 5, windowSeconds: 3600 }))) {
+    return { error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -60,7 +69,8 @@ export async function signUpWithEmail(_prev: ActionState, formData: FormData): P
       data: { full_name: parsed.data.full_name },
     },
   });
-  if (error) return { error: error.message };
+  // Generic message to avoid leaking whether the email is already registered.
+  if (error) return { error: 'No se pudo completar el registro. Revisa tu correo e intenta de nuevo.' };
   return { success: 'Revisa tu correo para confirmar tu cuenta.' };
 }
 
@@ -70,6 +80,10 @@ export async function requestPasswordReset(
 ): Promise<ActionState> {
   const parsed = forgotPasswordSchema.safeParse({ email: formData.get('email') });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
+
+  if (!(await checkRateLimit('reset', { max: 3, windowSeconds: 3600 }))) {
+    return { error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' };
+  }
 
   const supabase = await createClient();
   // Ignore the result to avoid leaking whether the email exists.
