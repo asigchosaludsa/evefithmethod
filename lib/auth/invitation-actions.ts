@@ -65,4 +65,5 @@ export async function cancelInvitationAction(invitationId: string): Promise<void
   await requireCoach();
   await cancelInvitation(invitationId);
   revalidatePath('/coach/students');
+  revalidatePath('/coach/students/invite');
 }

@@ -51,7 +51,7 @@ export async function reviewFoodLog(
   await requireCoach();
   const supabase = await createClient();
   await supabase.from('food_logs').update({ coach_review_status: status }).eq('id', foodLogId);
-  revalidatePath('/coach');
+  revalidatePath('/coach', 'layout');
 }
 
 export async function resolveAlert(alertId: string): Promise<void> {

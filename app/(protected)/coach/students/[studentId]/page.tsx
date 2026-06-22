@@ -13,6 +13,7 @@ import {
   PageHeader,
 } from '@/components/common';
 import { CoachNotesPanel } from '@/components/coach/CoachNotesPanel';
+import { AlertManager } from '@/components/coach/AlertManager';
 import { formatDate, formatDateTime } from '@/lib/utils/date';
 
 export default async function StudentDetailPage({
@@ -57,23 +58,14 @@ export default async function StudentDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {detail.openAlerts.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Alertas abiertas</CardTitle>
-              </CardHeader>
-              <CardBody className="space-y-2">
-                {detail.openAlerts.map((a) => (
-                  <div key={a.id} className="flex items-center gap-2">
-                    <Badge tone={a.severity === 'critical' ? 'danger' : a.severity === 'success' ? 'success' : 'warning'}>
-                      {a.title}
-                    </Badge>
-                    <span className="text-sm text-muted">{a.message}</span>
-                  </div>
-                ))}
-              </CardBody>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Alertas</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <AlertManager studentId={studentId} alerts={detail.openAlerts} />
+            </CardBody>
+          </Card>
 
           <Card>
             <CardHeader>

@@ -4,7 +4,10 @@ import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { NutritionPlanForm } from '@/components/coach/NutritionPlanForm';
-import { formatDate } from '@/lib/utils/date';
+import { FoodLogReviewList } from '@/components/coach/FoodLogReviewList';
+import { getStudentNutritionDay } from '@/lib/db/queries/student-nutrition';
+import { calculateMacroProgress } from '@/domain/nutrition/calculations';
+import { formatDate, todayISO } from '@/lib/utils/date';
 
 export default async function StudentNutritionPage({
   params,
@@ -16,18 +19,38 @@ export default async function StudentNutritionPage({
   await assertCoachOwnsStudent(coach.id, studentId);
 
   const supabase = await createClient();
-  const { data: plans } = await supabase
-    .from('nutrition_plans')
-    .select('*')
-    .eq('student_id', studentId)
-    .order('created_at', { ascending: false });
+  const [{ data: plans }, day] = await Promise.all([
+    supabase.from('nutrition_plans').select('*').eq('student_id', studentId).order('created_at', { ascending: false }),
+    getStudentNutritionDay(studentId, todayISO()),
+  ]);
+  const calProgress = calculateMacroProgress(day.consumed.calories, day.target.calories ?? 0);
 
   return (
     <div className="space-y-6">
       <Link href={`/coach/students/${studentId}`} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
         <ArrowLeft className="size-4" /> Volver a la alumna
       </Link>
-      <PageHeader title="Nutrición" description="Planes nutricionales de la alumna." />
+      <PageHeader title="Nutrición" description="Planes y registros de comida de la alumna." />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Registros de comida (hoy)</CardTitle>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <p className="tabular text-sm text-foreground">
+              <span className="font-semibold">{day.consumed.calories}</span>
+              <span className="text-muted"> / {day.target.calories ?? '—'} kcal</span>
+              {day.target.calories ? <span className="text-faint"> · {calProgress.pct}%</span> : null}
+            </p>
+            <p className="tabular text-sm text-muted">
+              P {day.consumed.protein_g}/{day.target.protein_g ?? '—'} · C {day.consumed.carbs_g}/
+              {day.target.carbs_g ?? '—'} · G {day.consumed.fat_g}/{day.target.fat_g ?? '—'}
+            </p>
+          </div>
+          <FoodLogReviewList meals={day.meals} />
+        </CardBody>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="space-y-3">
