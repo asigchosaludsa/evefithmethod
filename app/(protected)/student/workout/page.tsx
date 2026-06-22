@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@
 import { GuidedWorkoutLogForm } from '@/components/student/GuidedWorkoutLogForm';
 import { WorkoutLogForm } from '@/components/student/WorkoutLogForm';
 import { formatDateTime } from '@/lib/utils/date';
+import { splitLabel } from '@/lib/constants/splits';
 
 export const metadata = { title: 'Mi entrenamiento' };
 
@@ -37,7 +38,11 @@ export default async function StudentWorkoutPage() {
     <div className="space-y-6">
       <PageHeader
         title="Mi entrenamiento"
-        description={content ? content.plan.title : 'Registra lo que entrenaste.'}
+        description={
+          content
+            ? [splitLabel(content.plan.split_type), content.plan.title].filter(Boolean).join(' · ')
+            : 'Registra lo que entrenaste.'
+        }
       />
 
       <Card>
