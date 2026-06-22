@@ -256,7 +256,7 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
   if (parsed.data.split_type) {
     const days = resolveSplitDays(parsed.data.split_type);
     if (days.length > 0) {
-      await supabase.from('workout_plan_days').insert(
+      const { error: daysError } = await supabase.from('workout_plan_days').insert(
         days.map((d) => ({
           workout_plan_id: plan.id,
           day_number: d.day_number,
@@ -264,6 +264,8 @@ export async function createWorkoutPlan(_prev: ActionState, formData: FormData):
           focus: d.focus,
         })),
       );
+      // El plan ya existe; si fallan los días, la coach puede agregarlos a mano.
+      if (daysError) console.error('No se pudieron generar los días del split:', daysError.message);
     }
   }
 
