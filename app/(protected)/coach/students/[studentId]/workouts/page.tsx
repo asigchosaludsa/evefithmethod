@@ -4,6 +4,7 @@ import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { WorkoutPlanForm } from '@/components/coach/WorkoutPlanForm';
+import { getLoggedExercises } from '@/lib/db/queries/exercise-history';
 
 export default async function StudentWorkoutsPage({
   params,
@@ -20,6 +21,7 @@ export default async function StudentWorkoutsPage({
     .select('*')
     .eq('student_id', studentId)
     .order('created_at', { ascending: false });
+  const loggedExercises = await getLoggedExercises(studentId);
 
   return (
     <div className="space-y-6">
@@ -65,6 +67,27 @@ export default async function StudentWorkoutsPage({
           </CardBody>
         </Card>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-semibold text-foreground">Historial por ejercicio</h2>
+        {loggedExercises.length === 0 ? (
+          <EmptyState title="Sin ejercicios registrados" description="Aparecerán cuando la alumna registre entrenamientos." />
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {loggedExercises.map((ex) => (
+              <li key={ex.exerciseId}>
+                <Link
+                  href={`/coach/students/${studentId}/exercise/${ex.exerciseId}`}
+                  className="flex items-center justify-between rounded-lg border border-border bg-surface p-4 transition-colors hover:bg-elevated"
+                >
+                  <span className="font-medium text-foreground">{ex.name}</span>
+                  <Badge tone="neutral">{ex.sessions} sesiones</Badge>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

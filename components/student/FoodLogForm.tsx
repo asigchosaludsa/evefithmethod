@@ -2,10 +2,13 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Trash2 } from 'lucide-react';
+import { Camera, Check, Search, Trash2 } from 'lucide-react';
 import { logFood } from '@/lib/student/actions';
+import { createClient } from '@/lib/supabase/client';
 import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/calculations';
 import { Button, FormField, Input, Select, Textarea } from '@/components/common';
+import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
+import type { NewFood } from '@/lib/student/food-actions';
 import type { MealType } from '@/types/app';
 
 export interface FoodOption {
@@ -31,7 +34,7 @@ const MEAL_OPTIONS: { value: MealType; label: string }[] = [
   { value: 'other', label: 'Otro' },
 ];
 
-export function FoodLogForm({ foodItems }: { foodItems: FoodOption[] }) {
+export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; userId: string }) {
   const router = useRouter();
   const [mealType, setMealType] = useState<MealType>('breakfast');
   const [notes, setNotes] = useState('');
@@ -39,14 +42,43 @@ export function FoodLogForm({ foodItems }: { foodItems: FoodOption[] }) {
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [foods, setFoods] = useState<FoodOption[]>(foodItems);
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
-  const foodMap = useMemo(() => new Map(foodItems.map((f) => [f.id, f])), [foodItems]);
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('La foto debe ser JPG, PNG o WEBP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La foto debe pesar menos de 5MB.');
+      return;
+    }
+    setPhotoBusy(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${userId}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('food-photos')
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) setError(upErr.message);
+      else setPhotoPath(path);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  const foodMap = useMemo(() => new Map(foods.map((f) => [f.id, f])), [foods]);
   const matches = useMemo(
     () =>
       q.trim()
-        ? foodItems.filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
+        ? foods.filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
         : [],
-    [q, foodItems],
+    [q, foods],
   );
   const totals = useMemo(
     () =>
@@ -64,6 +96,11 @@ export function FoodLogForm({ foodItems }: { foodItems: FoodOption[] }) {
     setQ('');
   }
 
+  function handleCreated(food: NewFood) {
+    setFoods((fs) => (fs.some((f) => f.id === food.id) ? fs : [food, ...fs]));
+    addFood(food);
+  }
+
   function submit() {
     setError(null);
     if (lines.length === 0) {
@@ -74,6 +111,7 @@ export function FoodLogForm({ foodItems }: { foodItems: FoodOption[] }) {
       const res = await logFood({
         mealType,
         notes: notes || undefined,
+        photoPath,
         items: lines.map((l) => ({ foodItemId: l.foodItemId, grams: l.grams })),
       });
       if (res.error) {
@@ -121,6 +159,9 @@ export function FoodLogForm({ foodItems }: { foodItems: FoodOption[] }) {
               ))}
             </ul>
           )}
+        </div>
+        <div className="mt-2 flex justify-end">
+          <CreateFoodDialog onCreated={handleCreated} />
         </div>
       </FormField>
 
@@ -180,6 +221,23 @@ export function FoodLogForm({ foodItems }: { foodItems: FoodOption[] }) {
 
       <FormField label="Nota" htmlFor="notes" hint="Opcional">
         <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </FormField>
+
+      <FormField label="Foto (opcional)">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-foreground">
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} className="hidden" />
+          {photoBusy ? (
+            'Subiendo…'
+          ) : photoPath ? (
+            <>
+              <Check className="size-4 text-success" /> Foto adjunta
+            </>
+          ) : (
+            <>
+              <Camera className="size-4" /> Adjuntar foto
+            </>
+          )}
+        </label>
       </FormField>
 
       {error && <p className="text-sm text-danger">{error}</p>}

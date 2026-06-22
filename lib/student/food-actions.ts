@@ -1,0 +1,64 @@
+'use server';
+
+import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/server';
+import { requireStudent } from '@/lib/auth/roles';
+
+export interface NewFood {
+  id: string;
+  name: string;
+  calories_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+}
+
+const schema = z.object({
+  name: z.string().min(1, 'El nombre es obligatorio.'),
+  calories: z.coerce.number().min(0, 'Las calorías no pueden ser negativas.'),
+  protein: z.coerce.number().min(0, 'La proteína no puede ser negativa.'),
+  carbs: z.coerce.number().min(0, 'Los carbohidratos no pueden ser negativos.'),
+  fat: z.coerce.number().min(0, 'Las grasas no pueden ser negativas.'),
+});
+
+export async function createCustomFood(input: {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}): Promise<{ food?: NewFood; error?: string }> {
+  const student = await requireStudent();
+
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    return { error: first?.message ?? 'Datos inválidos.' };
+  }
+
+  const { name, calories, protein, carbs, fat } = parsed.data;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('food_items')
+    .insert({
+      name,
+      calories_per_100g: calories,
+      protein_per_100g: protein,
+      carbs_per_100g: carbs,
+      fat_per_100g: fat,
+      source: 'custom',
+      created_by: student.id,
+      is_public: false,
+    })
+    .select('id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g')
+    .single();
+
+  if (error || !data) {
+    return { error: error?.message ?? 'No se pudo crear el alimento.' };
+  }
+
+  revalidatePath('/student/meals/new');
+  return { food: data };
+}

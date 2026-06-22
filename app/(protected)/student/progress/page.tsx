@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { calculateWeeklyWeightTrend } from '@/domain/progress/calculations';
 import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader, StatCard } from '@/components/common';
 import { MeasurementForm, WeightForm } from '@/components/student/ProgressForms';
+import { ProgressPhotoUpload } from '@/components/student/ProgressPhotoUpload';
+import { getProgressPhotos } from '@/lib/db/queries/progress-photos';
 import { formatDate } from '@/lib/utils/date';
 
 export const metadata = { title: 'Mi progreso' };
@@ -17,6 +19,7 @@ export default async function StudentProgressPage() {
 
   const trend = calculateWeeklyWeightTrend((weights ?? []).map((w) => ({ weight_kg: w.weight_kg, recorded_at: w.recorded_at })));
   const latest = weights?.[0];
+  const photos = await getProgressPhotos(profile.id);
 
   return (
     <div className="space-y-6">
@@ -31,6 +34,31 @@ export default async function StudentProgressPage() {
         />
         <StatCard label="Registros" value={weights?.length ?? 0} />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Fotos de progreso</CardTitle>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <ProgressPhotoUpload userId={profile.id} />
+          {photos.length === 0 ? (
+            <p className="text-sm text-faint">Aún no has subido fotos.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {photos.map((p) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={p.id}
+                  src={p.url}
+                  alt={`Foto de progreso (${p.photoType})`}
+                  loading="lazy"
+                  className="aspect-square w-full rounded-md border border-hairline object-cover"
+                />
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

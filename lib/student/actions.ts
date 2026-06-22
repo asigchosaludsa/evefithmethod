@@ -16,6 +16,7 @@ function firstError(issues: { message: string }[]): string {
 export interface LogFoodInput {
   mealType: MealType;
   notes?: string;
+  photoPath?: string | null;
   items: { foodItemId: string; grams: number }[];
 }
 
@@ -40,6 +41,7 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
       meal_type: input.mealType,
       logged_at: new Date().toISOString(),
       notes: input.notes ?? null,
+      photo_path: input.photoPath ?? null,
     })
     .select('id')
     .single();

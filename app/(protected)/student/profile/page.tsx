@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardBody, CardHeader, CardTitle, PageHeader } from '@/components/common';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 import { StudentProfileForm } from '@/components/student/StudentProfileForm';
+import { AvatarUpload } from '@/components/student/AvatarUpload';
 
 export const metadata = { title: 'Mi perfil' };
 
@@ -24,7 +25,8 @@ export default async function StudentProfilePage() {
         <CardHeader>
           <CardTitle>Datos</CardTitle>
         </CardHeader>
-        <CardBody>
+        <CardBody className="space-y-5">
+          <AvatarUpload userId={profile.id} current={profile.avatar_url} name={profile.full_name ?? 'Alumna'} />
           <StudentProfileForm defaults={{ full_name: profile.full_name ?? '', goal: sp?.goal ?? '' }} />
         </CardBody>
       </Card>

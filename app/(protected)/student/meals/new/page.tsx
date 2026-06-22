@@ -23,7 +23,7 @@ export default async function NewMealPage() {
       </Link>
       <PageHeader title="Registrar comida" description="Busca alimentos y registra lo que comiste." />
       <Card className="p-6">
-        <FoodLogForm foodItems={foods ?? []} />
+        <FoodLogForm foodItems={foods ?? []} userId={profile.id} />
       </Card>
     </div>
   );

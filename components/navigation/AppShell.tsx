@@ -16,6 +16,7 @@ import {
   Settings,
   User,
   Users,
+  Utensils,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -43,7 +44,8 @@ const COACH_NAV: NavItem[] = [
 
 const STUDENT_NAV: NavItem[] = [
   { label: 'Hoy', href: '/student/today', icon: Home },
-  { label: 'Comidas', href: '/student/meals', icon: Apple },
+  { label: 'Nutrición', href: '/student/nutrition', icon: Apple },
+  { label: 'Comidas', href: '/student/meals', icon: Utensils },
   { label: 'Entreno', href: '/student/workout', icon: Dumbbell },
   { label: 'Progreso', href: '/student/progress', icon: LineChart },
   { label: 'Contenido', href: '/student/content', icon: BookOpen },
