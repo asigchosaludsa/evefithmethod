@@ -6,6 +6,19 @@
 
 ---
 
+## Retomar una sesión nueva (contexto + conexiones)
+
+Para que una sesión nueva entienda dónde quedamos y cómo conectarse:
+
+1. **Estado y avance:** la memoria automática del proyecto (índice `MEMORY.md` + archivos en la carpeta de memoria) describe lo construido y lo pendiente. Léela primero.
+2. **Arquitectura y reglas:** este `CLAUDE.md`.
+3. **Tokens y accesos (Vercel, Supabase Management, Resend, etc.):** están en **`OPERATIONS.local.md`** en la raíz del repo. Ese archivo está **gitignored** (nunca se sube) y contiene los tokens reales + los comandos exactos para aplicar migraciones, desplegar y configurar Supabase. **Léelo para conectarte.** Las claves de runtime de la app están en `.env.local` (también gitignored).
+4. **Verificación obligatoria** antes de declarar algo hecho: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
+
+> Servicios que usamos: **Vercel** (deploy, scope `eve-fit-method`), **Supabase** (proyecto `bhlkfmulpvybzfxumbyp`: Auth+Postgres+Storage; migraciones vía Management API), **Resend** (correo, dominio verificado), **Cloudflare Turnstile** (CAPTCHA), **GitHub** (`asigchosaludsa/evefithmethod`, `gh` autenticado). NUNCA escribas tokens reales en este archivo ni en commits; van solo en `OPERATIONS.local.md` / `.env.local`.
+
+---
+
 ## Resumen del proyecto (memoria en viñetas)
 
 - **Proyecto:** EveFit Method.

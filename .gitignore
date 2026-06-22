@@ -54,3 +54,7 @@ Thumbs.db
 /media/
 
 .vercel
+
+# Operations runbook with real tokens for resuming sessions (NEVER commit)
+OPERATIONS.local.md
+*.local.md
