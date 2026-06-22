@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Check, Copy, Mail, MessageCircle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/common';
-import { convertLeadToInvitation } from '@/lib/coach/lead-actions';
+import { convertLeadToInvitation, resendInvitationByEmail } from '@/lib/coach/lead-actions';
 
 interface ConvertLeadButtonProps {
   leadId: string;
@@ -18,13 +18,13 @@ interface Generated {
 }
 
 const WHATSAPP_MESSAGE = 'Hola! Este es tu enlace para registrarte en EveFit Method: ';
-const EMAIL_SUBJECT = 'Tu invitación a EveFit Method';
 
 export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertLeadButtonProps) {
   const [isPending, startTransition] = React.useTransition();
   const [generated, setGenerated] = React.useState<Generated | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+  const [resend, setResend] = React.useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
   if (alreadyConverted && !generated) {
     return <span className="text-xs font-medium text-faint">Ya convertida</span>;
@@ -66,8 +66,14 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
 
   const waDigits = (generated.phone ?? '').replace(/\D/g, '');
   const waHref = `https://wa.me/${waDigits}?text=${encodeURIComponent(WHATSAPP_MESSAGE + generated.link)}`;
-  const mailBody = `${WHATSAPP_MESSAGE}\n\n${generated.link}`;
-  const mailHref = `mailto:${generated.email}?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent(mailBody)}`;
+
+  function handleResend() {
+    setResend('sending');
+    startTransition(async () => {
+      const res = await resendInvitationByEmail(leadId);
+      setResend(res.ok ? 'sent' : 'failed');
+    });
+  }
 
   return (
     <div className="space-y-2 rounded-md border border-success/25 bg-success/5 p-3">
@@ -96,12 +102,12 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
             <MessageCircle className="size-4" aria-hidden /> WhatsApp
           </a>
         </Button>
-        <Button size="sm" variant="outline" asChild>
-          <a href={mailHref}>
-            <Mail className="size-4" aria-hidden /> Email
-          </a>
+        <Button size="sm" variant="outline" onClick={handleResend} loading={resend === 'sending'}>
+          <Mail className="size-4" aria-hidden />
+          {resend === 'sent' ? 'Reenviado ✓' : 'Reenviar por correo'}
         </Button>
       </div>
+      {resend === 'failed' && <p className="text-[11px] text-danger">No se pudo reenviar el correo.</p>}
     </div>
   );
 }

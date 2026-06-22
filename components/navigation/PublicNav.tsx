@@ -10,7 +10,7 @@ export function PublicNav() {
         </Link>
         <nav className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href="/login">Iniciar sesión</Link>
+            <Link href="/login">¿Ya eres alumna? Ingresa aquí</Link>
           </Button>
           <Button asChild size="sm">
             <Link href="/solicitud">Empieza ya</Link>

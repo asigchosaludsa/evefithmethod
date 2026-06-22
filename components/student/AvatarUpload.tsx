@@ -4,10 +4,9 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/utils/compress-image';
 import { updateAvatar } from '@/lib/student/photo-actions';
 import { Button } from '@/components/common';
-
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function AvatarUpload({
   userId,
@@ -28,22 +27,18 @@ export function AvatarUpload({
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    if (!ALLOWED.includes(file.type)) {
-      setError('Solo JPG, PNG o WEBP.');
-      return;
-    }
-    if (file.size > 3 * 1024 * 1024) {
-      setError('La imagen debe pesar menos de 3MB.');
-      return;
-    }
     setBusy(true);
     try {
+      const blob = await compressImage(file);
+      if (blob.size > 6 * 1024 * 1024) {
+        setError('La imagen es demasiado grande.');
+        return;
+      }
       const supabase = createClient();
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${userId}/avatar.${ext}`;
+      const path = `${userId}/avatar.jpg`;
       const { error: upErr } = await supabase.storage
         .from('avatars')
-        .upload(path, file, { contentType: file.type, upsert: true });
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
       if (upErr) {
         setError(upErr.message);
         return;
@@ -78,7 +73,7 @@ export function AvatarUpload({
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           onChange={onFile}
           className="hidden"
         />

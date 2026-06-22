@@ -84,7 +84,7 @@ export async function acceptInvitation(input: {
 
   await admin
     .from('profiles')
-    .update({ role: 'student', status: 'active', full_name: input.fullName })
+    .update({ role: 'student', status: 'active', full_name: input.fullName, onboarding_completed: true })
     .eq('id', userId);
 
   await admin
@@ -108,6 +108,70 @@ export async function acceptInvitation(input: {
   if (tpl) await sendEmail({ to: inv.email, subject: tpl.subject, html: tpl.html });
 
   return { success: true, email: inv.email };
+}
+
+/**
+ * Accept an invitation for a user who signed in via OAuth (e.g. Google). The
+ * auth user already exists; we match a pending invitation by email and wire up
+ * the student profile and coach link. No-op (returns false) when there is no
+ * matching pending invitation. Runs with the service-role client.
+ */
+export async function acceptInvitationForOAuthUser(input: {
+  userId: string;
+  email: string;
+}): Promise<boolean> {
+  const email = input.email.toLowerCase();
+  if (!email) return false;
+
+  const admin = createAdminClient();
+
+  const { data: inv } = await admin
+    .from('invitations')
+    .select('*')
+    .eq('email', email)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (!inv) return false;
+  if (inv.expires_at && new Date(inv.expires_at) < new Date()) {
+    await admin.from('invitations').update({ status: 'expired' }).eq('id', inv.id);
+    return false;
+  }
+
+  // Keep an existing profile name if present; otherwise use the invitation name.
+  const { data: existingProfile } = await admin
+    .from('profiles')
+    .select('full_name')
+    .eq('id', input.userId)
+    .maybeSingle();
+  const fullName = existingProfile?.full_name || inv.student_name;
+
+  await admin
+    .from('profiles')
+    .update({ role: 'student', status: 'active', full_name: fullName, onboarding_completed: true })
+    .eq('id', input.userId);
+
+  await admin
+    .from('student_profiles')
+    .upsert({ user_id: input.userId, goal: inv.goal ?? null }, { onConflict: 'user_id' });
+
+  await admin
+    .from('coach_students')
+    .upsert(
+      { coach_id: inv.coach_id, student_id: input.userId, status: 'active' },
+      { onConflict: 'coach_id,student_id' },
+    );
+
+  await admin
+    .from('invitations')
+    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+    .eq('id', inv.id);
+
+  // Welcome email (fails soft: never block a successful registration).
+  const tpl = await renderEmail('welcome', { nombre: fullName ?? '' });
+  if (tpl) await sendEmail({ to: inv.email, subject: tpl.subject, html: tpl.html });
+
+  return true;
 }
 
 /** Cancel a pending invitation (coach action). Scoped to the owning coach. */

@@ -124,7 +124,7 @@ export default function LandingPage() {
             iniciar cambios importantes en alimentación o entrenamiento.
           </p>
           <nav className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-            <Link href="/login" className="hover:text-foreground">Iniciar sesión</Link>
+            <Link href="/login" className="hover:text-foreground">¿Ya eres alumna? Ingresa aquí</Link>
             <Link href="/solicitud" className="hover:text-foreground">Empieza ya</Link>
             <Link href="/terms" className="hover:text-foreground">Términos</Link>
             <Link href="/privacy" className="hover:text-foreground">Privacidad</Link>

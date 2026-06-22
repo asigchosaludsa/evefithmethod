@@ -1,7 +1,10 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { OAuthButtons } from '@/components/auth/OAuthButtons';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { createClient } from '@/lib/supabase/server';
+import { dashboardPathForProfile } from '@/lib/auth/redirects';
 
 export const metadata = { title: 'Iniciar sesión' };
 
@@ -10,6 +13,16 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // Already signed in: skip the form and go straight to the dashboard.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    redirect(dashboardPathForProfile(profile));
+  }
+
   const { error } = await searchParams;
   const message =
     error === 'account_inactive'

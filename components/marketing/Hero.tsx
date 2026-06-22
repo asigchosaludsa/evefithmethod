@@ -96,7 +96,7 @@ export function Hero() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/login">Iniciar sesión</Link>
+              <Link href="/login">Ya soy alumna</Link>
             </Button>
           </div>
         </div>

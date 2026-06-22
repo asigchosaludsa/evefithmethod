@@ -80,3 +80,37 @@ export async function convertLeadToInvitation(leadId: string): Promise<ConvertLe
     return { ok: false, error: e instanceof Error ? e.message : 'No se pudo generar la invitación.' };
   }
 }
+
+/**
+ * Resend the invitation to the lead's email FROM THE WEB (Resend SMTP), not a
+ * mailto link. Creates a fresh invitation (the raw token is one-time and not
+ * stored) and emails it with the branded template.
+ */
+export async function resendInvitationByEmail(
+  leadId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const coach = await requireCoach();
+    const supabase = await createClient();
+    const { data: lead } = await supabase
+      .from('leads')
+      .select('full_name, email')
+      .eq('id', leadId)
+      .maybeSingle();
+    if (!lead) return { ok: false, error: 'No se encontró la solicitud.' };
+
+    const { token } = await createInvitation({
+      coachId: coach.id,
+      email: lead.email,
+      studentName: lead.full_name,
+      expiresInDays: 7,
+    });
+    const link = getURL(`/accept-invitation?token=${token}`);
+    const tpl = await renderEmail('invitation', { nombre: lead.full_name, link });
+    if (!tpl) return { ok: false, error: 'La plantilla de invitación está desactivada.' };
+    const sent = await sendEmail({ to: lead.email, subject: tpl.subject, html: tpl.html });
+    return sent ? { ok: true } : { ok: false, error: 'No se pudo enviar el correo.' };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'No se pudo reenviar.' };
+  }
+}

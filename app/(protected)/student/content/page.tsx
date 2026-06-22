@@ -1,7 +1,6 @@
 import { requireStudent } from '@/lib/auth/roles';
 import { createClient } from '@/lib/supabase/server';
 import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
-import { MarkReadButton } from '@/components/student/MarkReadButton';
 
 export const metadata = { title: 'Contenido' };
 
@@ -45,9 +44,6 @@ export default async function StudentContentPage() {
                 {post!.body && (
                   <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{post!.body}</p>
                 )}
-                <div className="pt-1">
-                  <MarkReadButton assignmentId={assignment.id} read={Boolean(assignment.read_at)} />
-                </div>
               </CardBody>
             </Card>
           ))}

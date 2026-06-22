@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, Check, Search, Trash2 } from 'lucide-react';
 import { logFood } from '@/lib/student/actions';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/utils/compress-image';
 import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/calculations';
 import { Button, FormField, Input, Select, Textarea } from '@/components/common';
 import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
@@ -49,22 +50,19 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('La foto debe ser JPG, PNG o WEBP.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La foto debe pesar menos de 5MB.');
-      return;
-    }
+    setError(null);
     setPhotoBusy(true);
     try {
+      const blob = await compressImage(file);
+      if (blob.size > 6 * 1024 * 1024) {
+        setError('La foto es demasiado grande.');
+        return;
+      }
       const supabase = createClient();
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${userId}/${Date.now()}.${ext}`;
+      const path = `${userId}/${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from('food-photos')
-        .upload(path, file, { contentType: file.type, upsert: false });
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
       if (upErr) setError(upErr.message);
       else setPhotoPath(path);
     } finally {
@@ -225,7 +223,7 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
 
       <FormField label="Foto (opcional)">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-foreground">
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} className="hidden" />
+          <input type="file" accept="image/*" onChange={onPhoto} className="hidden" />
           {photoBusy ? (
             'Subiendo…'
           ) : photoPath ? (

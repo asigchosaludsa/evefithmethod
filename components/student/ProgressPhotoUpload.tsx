@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { compressImage } from '@/lib/utils/compress-image';
 import { saveProgressPhoto } from '@/lib/student/photo-actions';
 import { Button, Select } from '@/components/common';
 import type { PhotoType } from '@/types/app';
@@ -14,8 +15,6 @@ const TYPES: { value: PhotoType; label: string }[] = [
   { value: 'back', label: 'Espalda' },
   { value: 'other', label: 'Otra' },
 ];
-
-const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function ProgressPhotoUpload({ userId }: { userId: string }) {
   const router = useRouter();
@@ -28,22 +27,18 @@ export function ProgressPhotoUpload({ userId }: { userId: string }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    if (!ALLOWED.includes(file.type)) {
-      setError('Solo JPG, PNG o WEBP.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La imagen debe pesar menos de 5MB.');
-      return;
-    }
     setBusy(true);
     try {
+      const blob = await compressImage(file);
+      if (blob.size > 6 * 1024 * 1024) {
+        setError('La imagen es demasiado grande.');
+        return;
+      }
       const supabase = createClient();
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${userId}/${Date.now()}.${ext}`;
+      const path = `${userId}/${Date.now()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from('progress-photos')
-        .upload(path, file, { contentType: file.type, upsert: false });
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
       if (upErr) {
         setError(upErr.message);
         return;
@@ -78,7 +73,7 @@ export function ProgressPhotoUpload({ userId }: { userId: string }) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         onChange={onFile}
         className="hidden"
       />

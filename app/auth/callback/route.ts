@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { dashboardPathForProfile, validateSafeRedirect } from '@/lib/auth/redirects';
 import { ensureOwnerPromoted } from '@/lib/auth/owner';
+import { acceptInvitationForOAuthUser } from '@/lib/db/mutations/invitations';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
       // Single-owner model: if this is the configured owner, ensure they are an
       // active coach before we compute the destination.
       if (user) await ensureOwnerPromoted(user.id, user.email);
+      // If this email was invited as a student, complete their registration
+      // automatically. No-op for everyone else.
+      if (user) await acceptInvitationForOAuthUser({ userId: user.id, email: user.email ?? '' });
 
       let dest = next;
       if (!dest) {
