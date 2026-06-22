@@ -4,6 +4,9 @@
 -- Ejecuta seed.sql aparte (opcional) después de crear tu primera coach.
 -- ============================================================
 
+-- Permite crear funciones que referencian tablas creadas más abajo.
+set check_function_bodies = off;
+
 
 -- >>>>>>>>>>>>>>>>>>>> supabase/migrations/0001_extensions.sql <<<<<<<<<<<<<<<<<<<<
 
@@ -18,6 +21,10 @@ create extension if not exists "citext";      -- case-insensitive email (optiona
 -- 0002_helpers_roles.sql
 -- RLS helper functions (SECURITY DEFINER so they bypass RLS internally and
 -- never cause recursive policy evaluation) + shared utility triggers.
+
+-- These SQL functions reference tables created later (in 0003). Disable body
+-- validation so they can be created first; they are valid at call time.
+set check_function_bodies = off;
 
 -- Current user's role from their profile.
 create or replace function public.current_user_role()

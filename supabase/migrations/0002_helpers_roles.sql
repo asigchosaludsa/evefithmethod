@@ -2,6 +2,10 @@
 -- RLS helper functions (SECURITY DEFINER so they bypass RLS internally and
 -- never cause recursive policy evaluation) + shared utility triggers.
 
+-- These SQL functions reference tables created later (in 0003). Disable body
+-- validation so they can be created first; they are valid at call time.
+set check_function_bodies = off;
+
 -- Current user's role from their profile.
 create or replace function public.current_user_role()
 returns text
