@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { requestPasswordReset } from '@/lib/auth/actions';
 import { initialActionState } from '@/lib/auth/action-state';
 import { FormField, Input, SubmitButton } from '@/components/common';
+import { TurnstileField } from './TurnstileField';
 
 export function ForgotPasswordForm() {
   const [state, action] = useActionState(requestPasswordReset, initialActionState);
@@ -24,6 +25,7 @@ export function ForgotPasswordForm() {
           {state.error}
         </p>
       )}
+      <TurnstileField />
       <SubmitButton className="w-full" size="lg">
         Enviar enlace
       </SubmitButton>

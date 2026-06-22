@@ -31,9 +31,18 @@ export async function signInWithEmail(_prev: ActionState, formData: FormData): P
     return { error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' };
   }
 
+  const captchaToken = (formData.get('cf-turnstile-response') as string) || undefined;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: 'Email o contraseña incorrectos.' };
+  const { error } = await supabase.auth.signInWithPassword({
+    ...parsed.data,
+    options: { captchaToken },
+  });
+  if (error) {
+    if (/captcha/i.test(error.message)) {
+      return { error: 'No pudimos verificar que eres humano. Recarga e intenta de nuevo.' };
+    }
+    return { error: 'Email o contraseña incorrectos.' };
+  }
 
   const {
     data: { user },
@@ -85,10 +94,12 @@ export async function requestPasswordReset(
     return { error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' };
   }
 
+  const captchaToken = (formData.get('cf-turnstile-response') as string) || undefined;
   const supabase = await createClient();
   // Ignore the result to avoid leaking whether the email exists.
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: getURL('/update-password'),
+    captchaToken,
   });
   return { success: 'Si el correo existe, te enviamos un enlace para restablecer tu contraseña.' };
 }

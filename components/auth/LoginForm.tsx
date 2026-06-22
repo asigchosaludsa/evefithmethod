@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { signInWithEmail } from '@/lib/auth/actions';
 import { initialActionState } from '@/lib/auth/action-state';
 import { FormField, Input, SubmitButton } from '@/components/common';
+import { TurnstileField } from './TurnstileField';
 
 export function LoginForm() {
   const [state, action] = useActionState(signInWithEmail, initialActionState);
@@ -22,6 +23,7 @@ export function LoginForm() {
           {state.error}
         </p>
       )}
+      <TurnstileField />
       <SubmitButton className="w-full" size="lg">
         Iniciar sesión
       </SubmitButton>

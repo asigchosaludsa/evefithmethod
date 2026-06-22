@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/security/rate-limit';
+import { verifyTurnstile } from '@/lib/security/turnstile';
 import type { ActionState } from '@/lib/auth/action-state';
 import { leadRequestSchema } from '@/lib/validators/lead';
 
@@ -29,6 +30,11 @@ export async function submitLeadRequest(
 ): Promise<ActionState> {
   if (!(await checkRateLimit('lead', { max: 5, windowSeconds: 3600 }))) {
     return { error: 'Demasiadas solicitudes. Intenta más tarde.' };
+  }
+
+  const captchaToken = (formData.get('cf-turnstile-response') as string) || undefined;
+  if (!(await verifyTurnstile(captchaToken))) {
+    return { error: 'No pudimos verificar que eres humano. Recarga e intenta de nuevo.' };
   }
 
   const parsed = leadRequestSchema.safeParse({

@@ -7,6 +7,7 @@ import { submitLeadRequest } from '@/lib/leads/actions';
 import { initialActionState } from '@/lib/auth/action-state';
 import { Button, FormField, Input, Select, Textarea, SubmitButton } from '@/components/common';
 import { GOAL_OPTIONS, LEVEL_OPTIONS } from '@/lib/validators/lead';
+import { TurnstileField } from '@/components/auth/TurnstileField';
 
 export function LeadRequestForm() {
   const [state, action] = useActionState(submitLeadRequest, initialActionState);
@@ -77,6 +78,7 @@ export function LeadRequestForm() {
           {state.error}
         </p>
       )}
+      <TurnstileField />
       <SubmitButton className="w-full" size="lg">
         Enviar solicitud
       </SubmitButton>
