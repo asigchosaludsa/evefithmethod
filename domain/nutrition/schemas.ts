@@ -17,6 +17,8 @@ export type NutritionPlanInput = z.infer<typeof nutritionPlanSchema>;
 
 export const foodLogItemSchema = z.object({
   food_item_id: z.uuid().nullable().optional(),
+  unit: z.enum(['g', 'ml', 'unit']).default('g'),
+  quantity: z.coerce.number().positive('La cantidad debe ser mayor a 0'),
   grams: z.coerce.number().positive('Los gramos deben ser mayores a 0'),
 });
 
