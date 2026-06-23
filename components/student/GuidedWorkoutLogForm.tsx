@@ -21,6 +21,7 @@ interface ExBlock {
   targetReps: string;
   targetSets: number;
   suggested: number | null;
+  lastUsed: number | null;
   rest: number | null;
   videoUrl: string | null;
   sets: SetState[];
@@ -39,6 +40,7 @@ function buildBlocks(day: PlanDay | undefined, lastWeightByExercise: Record<stri
       targetReps: ex.reps,
       targetSets: ex.sets,
       suggested: ex.suggested_weight_kg,
+      lastUsed: last ?? null,
       rest: ex.rest_seconds,
       videoUrl: ex.video_url,
       sets: Array.from({ length: Math.max(1, ex.sets) }, () => ({
@@ -145,13 +147,26 @@ export function GuidedWorkoutLogForm({
         {blocks.map((b, bi) => (
           <div key={b.key} className="rounded-lg border border-hairline bg-canvas/40 p-3">
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium text-foreground">{b.name}</p>
                 <p className="tabular text-xs text-muted">
                   Objetivo: {b.targetSets}×{b.targetReps}
                   {b.rest ? ` · ${b.rest}s desc.` : ''}
-                  {b.suggested != null ? ` · sug. coach ${b.suggested}kg` : ''}
                 </p>
+                {(b.suggested != null || b.lastUsed != null) && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {b.suggested != null && (
+                      <span className="tabular inline-flex items-center rounded-full border border-hairline bg-canvas/60 px-2 py-0.5 text-[11px] text-muted">
+                        Coach asignó: {b.suggested} kg
+                      </span>
+                    )}
+                    {b.lastUsed != null && (
+                      <span className="tabular inline-flex items-center rounded-full border border-hairline bg-canvas/60 px-2 py-0.5 text-[11px] text-muted">
+                        Tú la última vez: {b.lastUsed} kg
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 {b.exerciseId && (seriesByExercise[b.exerciseId]?.length ?? 0) > 0 && (
@@ -203,8 +218,8 @@ export function GuidedWorkoutLogForm({
                   <Input
                     type="number"
                     inputMode="decimal"
-                    aria-label={`Peso serie ${si + 1}`}
-                    placeholder="kg"
+                    aria-label={`Peso (kg) que usaste hoy en la serie ${si + 1}`}
+                    placeholder="kg que usaste hoy"
                     value={s.weight}
                     onChange={(e) => updateSet(bi, si, { weight: e.target.value })}
                     className="h-9"
@@ -221,6 +236,9 @@ export function GuidedWorkoutLogForm({
                 </div>
               ))}
             </div>
+            <p className="mt-2 text-[11px] text-faint">
+              El peso viene precargado, pero puedes cambiarlo si hoy usaste otro (ej. 20 kg).
+            </p>
           </div>
         ))}
       </div>
