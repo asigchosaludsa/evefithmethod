@@ -90,6 +90,7 @@ export default async function StudentWorkoutPage() {
             days={calendar.days}
             exercisesByDay={calendar.exercisesByDay}
             statusByKey={calendar.statusByKey}
+            setsByKey={calendar.setsByKey}
             canEdit
             todayISO={todayISO}
           />

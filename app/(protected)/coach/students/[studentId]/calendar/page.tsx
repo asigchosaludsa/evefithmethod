@@ -39,6 +39,7 @@ export default async function CoachStudentCalendarPage({
         days={data.days}
         exercisesByDay={data.exercisesByDay}
         statusByKey={data.statusByKey}
+        setsByKey={data.setsByKey}
         canEdit
         todayISO={todayISO}
       />

@@ -23,11 +23,13 @@ import {
 } from '@/domain/workouts/calendar';
 import { Badge, Button, Card, CardBody, EmptyState } from '@/components/common';
 import { toggleSessionStatus } from '@/lib/workouts/session-actions';
+import { exerciseStatusForDay, type LoggedSet } from '@/domain/workouts/progression';
 import { cn } from '@/lib/utils/cn';
 
 type LogStatus = 'completed' | 'skipped' | 'started';
 
 interface CalendarExercise {
+  exercise_id: string | null;
   name: string;
   sets: number;
   reps: string;
@@ -40,6 +42,7 @@ export interface TrainingCalendarProps {
   days: PlanDayLite[];
   exercisesByDay: Record<string, CalendarExercise[]>;
   statusByKey: Record<string, LogStatus>;
+  setsByKey: Record<string, { exercise_id: string | null; weight_kg: number | null; completed: boolean }[]>;
   canEdit: boolean;
   todayISO: string;
 }
@@ -59,6 +62,7 @@ export function TrainingCalendar({
   days,
   exercisesByDay,
   statusByKey,
+  setsByKey,
   canEdit,
   todayISO,
 }: TrainingCalendarProps) {
@@ -279,17 +283,43 @@ export function TrainingCalendar({
             {selectedExercises.length === 0 ? (
               <p className="text-sm text-muted">Sin ejercicios asignados para este día.</p>
             ) : (
-              <ul className="divide-y divide-hairline">
-                {selectedExercises.map((ex, i) => (
-                  <li key={i} className="flex items-center justify-between py-2 text-sm">
-                    <span className="text-foreground">{ex.name}</span>
-                    <span className="tabular text-muted">
-                      {ex.sets} × {ex.reps}
-                      {ex.suggested_weight_kg != null ? ` · ${ex.suggested_weight_kg} kg` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              (() => {
+                const k = `${selected.planDay.id}|${selected.dateISO}`;
+                const planEx = exercisesByDay[selected.planDay.id] ?? [];
+                const sessionSets: LoggedSet[] = (setsByKey[k] ?? []).map((s) => ({
+                  exercise_id: s.exercise_id,
+                  weight_kg: s.weight_kg,
+                  completed: s.completed,
+                  session_date: selected.dateISO,
+                }));
+                const planIds = planEx.map((e) => e.exercise_id).filter((x): x is string => !!x);
+                const statusMap = exerciseStatusForDay(planIds, sessionSets);
+                const hasSession = (setsByKey[k]?.length ?? 0) > 0;
+                return (
+                  <ul className="space-y-1.5">
+                    {planEx.map((e, i) => {
+                      const st = e.exercise_id ? statusMap[e.exercise_id] : undefined;
+                      return (
+                        <li key={i} className="flex items-center gap-2 text-sm">
+                          {hasSession && st === 'done' ? (
+                            <Check className="size-4 text-primary" />
+                          ) : hasSession ? (
+                            <X className="size-4 text-faint" />
+                          ) : (
+                            <span className="size-4" />
+                          )}
+                          <span className={hasSession && st !== 'done' ? 'text-faint' : 'text-foreground'}>
+                            {e.name}
+                          </span>
+                          <span className="ml-auto text-xs text-faint">
+                            {e.sets}×{e.reps}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()
             )}
 
             {canEdit && (
