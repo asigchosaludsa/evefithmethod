@@ -60,7 +60,8 @@ export async function upsertWorkoutSession(
       })
       .eq('id', logId);
     if (error) return { error: error.message };
-    await db.from('workout_log_sets').delete().eq('workout_log_id', logId);
+    const { error: delError } = await db.from('workout_log_sets').delete().eq('workout_log_id', logId);
+    if (delError) return { error: delError.message };
   } else {
     const { data: created, error } = await db
       .from('workout_logs')
