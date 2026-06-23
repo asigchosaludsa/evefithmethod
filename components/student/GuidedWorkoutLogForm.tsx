@@ -155,14 +155,20 @@ export function GuidedWorkoutLogForm({
                 </p>
                 {(b.suggested != null || b.lastUsed != null) && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {b.suggested != null && (
-                      <span className="tabular inline-flex items-center rounded-full border border-hairline bg-canvas/60 px-2 py-0.5 text-[11px] text-muted">
-                        Coach asignó: {b.suggested} kg
+                    {b.lastUsed != null && (
+                      <span className="tabular inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                        Tú la última vez: {b.lastUsed} kg · cargado
                       </span>
                     )}
-                    {b.lastUsed != null && (
-                      <span className="tabular inline-flex items-center rounded-full border border-hairline bg-canvas/60 px-2 py-0.5 text-[11px] text-muted">
-                        Tú la última vez: {b.lastUsed} kg
+                    {b.suggested != null && (
+                      <span
+                        className={
+                          b.lastUsed == null
+                            ? 'tabular inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] text-primary'
+                            : 'tabular inline-flex items-center rounded-full border border-hairline bg-canvas/60 px-2 py-0.5 text-[11px] text-muted'
+                        }
+                      >
+                        Coach asignó: {b.suggested} kg{b.lastUsed == null ? ' · cargado' : ''}
                       </span>
                     )}
                   </div>
@@ -236,9 +242,11 @@ export function GuidedWorkoutLogForm({
                 </div>
               ))}
             </div>
-            <p className="mt-2 text-[11px] text-faint">
-              El peso viene precargado, pero puedes cambiarlo si hoy usaste otro (ej. 20 kg).
-            </p>
+            {(b.suggested != null || b.lastUsed != null) && (
+              <p className="mt-2 text-[11px] text-faint">
+                El peso viene precargado, pero puedes cambiarlo si hoy usaste otro (ej. 20 kg).
+              </p>
+            )}
           </div>
         ))}
       </div>

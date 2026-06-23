@@ -18,7 +18,19 @@ export function RouteProgress() {
   const pathname = usePathname();
   const [active, setActive] = React.useState(false);
   const [visible, setVisible] = React.useState(false);
+  const [reduced, setReduced] = React.useState(false);
   const timers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = () => setReduced(mq.matches);
+    const id = setTimeout(apply, 0); // defer to avoid synchronous setState in effect
+    mq.addEventListener('change', apply);
+    return () => {
+      clearTimeout(id);
+      mq.removeEventListener('change', apply);
+    };
+  }, []);
 
   const clearTimers = React.useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -83,7 +95,7 @@ export function RouteProgress() {
     };
   }, [start, clearTimers]);
 
-  if (!visible) return null;
+  if (!visible || reduced) return null;
 
   return (
     <div
@@ -95,7 +107,7 @@ export function RouteProgress() {
         style={
           active
             ? { animation: 'efm-route-progress 6s ease-out forwards' }
-            : { transform: 'scaleX(1)' }
+            : { animation: 'none', transform: 'scaleX(1)' }
         }
       />
     </div>
