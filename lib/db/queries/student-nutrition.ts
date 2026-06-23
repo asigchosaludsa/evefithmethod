@@ -103,3 +103,92 @@ export async function getStudentNutritionDay(
 
   return { target, consumed, meals };
 }
+
+export interface NutritionDayTotals {
+  consumed: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
+  hasLogs: boolean;
+}
+
+export interface StudentNutritionRange {
+  target: {
+    calories: number | null;
+    protein_g: number | null;
+    carbs_g: number | null;
+    fat_g: number | null;
+  };
+  /** dateISO (YYYY-MM-DD) -> totales consumidos ese día. */
+  byDate: Record<string, NutritionDayTotals>;
+}
+
+/** Totales consumidos por día en un rango [startISO, endISO] + meta del plan activo. */
+export async function getStudentNutritionRange(
+  studentId: string,
+  startISO: string,
+  endISO: string,
+): Promise<StudentNutritionRange> {
+  const supabase = await createClient();
+
+  const { data: plan } = await supabase
+    .from('nutrition_plans')
+    .select('calories_target, protein_target_g, carbs_target_g, fat_target_g')
+    .eq('student_id', studentId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const target = {
+    calories: plan?.calories_target ?? null,
+    protein_g: plan?.protein_target_g ?? null,
+    carbs_g: plan?.carbs_target_g ?? null,
+    fat_g: plan?.fat_target_g ?? null,
+  };
+
+  const { data: logs } = await supabase
+    .from('food_logs')
+    .select('id, logged_at')
+    .eq('student_id', studentId)
+    .gte('logged_at', `${startISO}T00:00:00`)
+    .lte('logged_at', `${endISO}T23:59:59`);
+
+  const logDate = new Map<string, string>();
+  for (const l of logs ?? []) logDate.set(l.id, l.logged_at.slice(0, 10));
+  const logIds = [...logDate.keys()];
+
+  const byDate: Record<string, NutritionDayTotals> = {};
+  if (logIds.length === 0) return { target, byDate };
+
+  const { data: items } = await supabase
+    .from('food_log_items')
+    .select('food_log_id, calories, protein_g, carbs_g, fat_g')
+    .in('food_log_id', logIds);
+
+  for (const it of items ?? []) {
+    const dateISO = logDate.get(it.food_log_id);
+    if (!dateISO) continue;
+    const cur = byDate[dateISO] ?? {
+      consumed: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+      hasLogs: true,
+    };
+    cur.consumed.calories += it.calories;
+    cur.consumed.protein_g += it.protein_g;
+    cur.consumed.carbs_g += it.carbs_g;
+    cur.consumed.fat_g += it.fat_g;
+    byDate[dateISO] = cur;
+  }
+  // Días con log pero sin items (raro) igualmente cuentan como con registro.
+  for (const dateISO of logDate.values()) {
+    if (!byDate[dateISO]) {
+      byDate[dateISO] = { consumed: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }, hasLogs: true };
+    }
+  }
+  // Redondeo a 1 decimal.
+  for (const k of Object.keys(byDate)) {
+    const c = byDate[k]!.consumed;
+    c.calories = Math.round(c.calories * 10) / 10;
+    c.protein_g = Math.round(c.protein_g * 10) / 10;
+    c.carbs_g = Math.round(c.carbs_g * 10) / 10;
+    c.fat_g = Math.round(c.fat_g * 10) / 10;
+  }
+  return { target, byDate };
+}
