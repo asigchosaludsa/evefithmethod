@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { addMeasurement, addWeight } from '@/lib/student/actions';
+import { addMeasurement, addWeight, setGoalWeight } from '@/lib/student/actions';
 import { initialActionState } from '@/lib/auth/action-state';
 import { FormField, Input, SubmitButton } from '@/components/common';
 
@@ -55,6 +55,20 @@ export function MeasurementForm() {
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
       {state.success && <p className="text-sm text-success">{state.success}</p>}
       <SubmitButton size="sm">Registrar medidas</SubmitButton>
+    </form>
+  );
+}
+
+export function GoalWeightForm({ current }: { current: number | null }) {
+  const [state, action] = useActionState(setGoalWeight, initialActionState);
+  return (
+    <form action={action} className="flex items-end gap-3">
+      <FormField label="Peso objetivo (kg)" htmlFor="goal_weight_kg">
+        <Input id="goal_weight_kg" name="goal_weight_kg" type="number" step="0.1" inputMode="decimal" defaultValue={current ?? ''} />
+      </FormField>
+      <SubmitButton size="sm">Guardar meta</SubmitButton>
+      {state.error && <p className="text-sm text-danger">{state.error}</p>}
+      {state.success && <p className="text-sm text-success">{state.success}</p>}
     </form>
   );
 }
