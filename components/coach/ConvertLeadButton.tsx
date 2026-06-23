@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Check, Copy, Mail, MessageCircle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/common';
 import { convertLeadToInvitation, resendInvitationByEmail } from '@/lib/coach/lead-actions';
+import { buildWhatsappInviteHref } from '@/lib/utils/whatsapp';
 
 interface ConvertLeadButtonProps {
   leadId: string;
@@ -14,10 +15,9 @@ interface Generated {
   link: string;
   phone: string;
   email: string;
+  studentName: string;
   emailed: boolean;
 }
-
-const WHATSAPP_MESSAGE = 'Hola! Este es tu enlace para registrarte en EveFit Method: ';
 
 export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertLeadButtonProps) {
   const [isPending, startTransition] = React.useTransition();
@@ -35,7 +35,13 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
     startTransition(async () => {
       const result = await convertLeadToInvitation(leadId);
       if (result.ok) {
-        setGenerated({ link: result.link, phone: result.phone, email: result.email, emailed: result.emailed });
+        setGenerated({
+          link: result.link,
+          phone: result.phone,
+          email: result.email,
+          studentName: result.studentName,
+          emailed: result.emailed,
+        });
       } else {
         setError(result.error);
       }
@@ -64,8 +70,11 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
     );
   }
 
-  const waDigits = (generated.phone ?? '').replace(/\D/g, '');
-  const waHref = `https://wa.me/${waDigits}?text=${encodeURIComponent(WHATSAPP_MESSAGE + generated.link)}`;
+  const waHref = buildWhatsappInviteHref({
+    phone: generated.phone,
+    studentName: generated.studentName,
+    link: generated.link,
+  });
 
   function handleResend() {
     setResend('sending');
@@ -97,11 +106,13 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
           {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
           {copied ? 'Copiado' : 'Copiar'}
         </Button>
-        <Button size="sm" variant="outline" asChild>
-          <a href={waHref} target="_blank" rel="noopener noreferrer">
-            <MessageCircle className="size-4" aria-hidden /> WhatsApp
-          </a>
-        </Button>
+        {waHref !== null && (
+          <Button size="sm" variant="outline" asChild>
+            <a href={waHref} target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="size-4" aria-hidden /> WhatsApp
+            </a>
+          </Button>
+        )}
         <Button size="sm" variant="outline" onClick={handleResend} loading={resend === 'sending'}>
           <Mail className="size-4" aria-hidden />
           {resend === 'sent' ? 'Reenviado ✓' : 'Reenviar por correo'}

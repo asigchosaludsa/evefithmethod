@@ -35,10 +35,12 @@ export async function acceptInvitationAction(formData: FormData): Promise<Accept
   return { success: true, email: res.email };
 }
 
-export type InviteState = { error?: string; link?: string };
+export type InviteChannel = 'email' | 'whatsapp';
+export type InviteState = { error?: string; link?: string; channel?: InviteChannel; studentName?: string };
 
 export async function inviteStudentAction(_prev: InviteState, formData: FormData): Promise<InviteState> {
   const coach = await requireCoach();
+  const channel: InviteChannel = formData.get('channel') === 'whatsapp' ? 'whatsapp' : 'email';
   const parsed = inviteStudentSchema.safeParse({
     email: formData.get('email'),
     student_name: formData.get('student_name'),
@@ -60,7 +62,11 @@ export async function inviteStudentAction(_prev: InviteState, formData: FormData
       expiresInDays: parsed.data.expires_in_days,
     });
     revalidatePath('/coach/students');
-    return { link: getURL(`/accept-invitation?token=${token}`) };
+    return {
+      link: getURL(`/accept-invitation?token=${token}`),
+      channel,
+      studentName: parsed.data.student_name,
+    };
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'No se pudo crear la invitación.' };
   }

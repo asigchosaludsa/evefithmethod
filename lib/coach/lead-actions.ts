@@ -9,7 +9,7 @@ import { sendEmail } from '@/lib/email/send';
 import { renderEmail } from '@/lib/email/render';
 
 export type ConvertLeadResult =
-  | { ok: true; link: string; phone: string; email: string; emailed: boolean }
+  | { ok: true; link: string; phone: string; email: string; studentName: string; emailed: boolean }
   | { ok: false; error: string };
 
 /** Mark a lead as contacted. RLS scopes the update to the owning coach. */
@@ -75,7 +75,7 @@ export async function convertLeadToInvitation(leadId: string): Promise<ConvertLe
       : false;
 
     revalidatePath('/coach/solicitudes');
-    return { ok: true, link, phone: lead.phone, email: lead.email, emailed };
+    return { ok: true, link, phone: lead.phone, email: lead.email, studentName: lead.full_name, emailed };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'No se pudo generar la invitación.' };
   }
