@@ -48,7 +48,7 @@ export function FoodLogReviewList({ meals }: { meals: MealLogSummary[] }) {
             <p className="text-sm">
               <span className="tabular text-muted">{m.totals.calories} kcal</span>
               <span className="mx-1.5 text-faint">·</span>
-              <MacroLine macros={m.totals} className="text-sm" />
+              <MacroLine macros={m.totals} unit="g" className="text-sm" />
             </p>
           </div>
 
