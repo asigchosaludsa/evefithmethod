@@ -62,3 +62,33 @@ export async function provisionDemoStudent(): Promise<
 
   return { ok: true, creds: { email, password }, userId: newId };
 }
+
+/**
+ * Borra cuentas demo expiradas (best-effort). Lo usa el cron diario y también
+ * se invoca oportunistamente al iniciar una demo, para que en el plan Hobby de
+ * Vercel (cron solo diario) las copias no se acumulen entre corridas.
+ * Devuelve cuántas borró. Nunca lanza.
+ */
+export async function cleanupExpiredDemos(limit = 20): Promise<number> {
+  try {
+    const admin = createAdminClient();
+    const { data: expired } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('is_demo', true)
+      .lt('demo_expires_at', new Date().toISOString())
+      .limit(limit);
+    let deleted = 0;
+    for (const p of expired ?? []) {
+      try {
+        await admin.auth.admin.deleteUser(p.id);
+        deleted += 1;
+      } catch {
+        // Fail-safe: se reintenta en la siguiente corrida.
+      }
+    }
+    return deleted;
+  } catch {
+    return 0;
+  }
+}

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/security/rate-limit';
-import { provisionDemoStudent } from '@/lib/demo/provision';
+import { provisionDemoStudent, cleanupExpiredDemos } from '@/lib/demo/provision';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +17,9 @@ export async function POST(request: Request) {
   if (!captchaToken) {
     return NextResponse.json({ error: 'Falta verificación anti-bot.' }, { status: 400 });
   }
+
+  // Limpieza oportunista de demos expiradas (el cron en Hobby solo corre 1×/día).
+  await cleanupExpiredDemos(10);
 
   const prov = await provisionDemoStudent();
   if (!prov.ok) return NextResponse.json({ error: prov.error }, { status: 503 });

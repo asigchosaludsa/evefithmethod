@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { cleanupExpiredDemos } from '@/lib/demo/provision';
 
 /**
  * Cron de limpieza de sesiones demo expiradas. Vercel Cron lo llama (ver
- * vercel.json) con `Authorization: Bearer ${CRON_SECRET}`. Borra (admin) los
- * perfiles is_demo cuyo demo_expires_at ya pasó; el borrado del auth user
- * dispara la cascada auth.users -> profiles -> datos. Fail-safe: si algún
- * borrado falla, la cuenta vive más y se reintenta en la siguiente corrida.
+ * vercel.json) con `Authorization: Bearer ${CRON_SECRET}`. En el plan Hobby de
+ * Vercel el cron solo puede correr una vez al día; entre corridas, /api/demo/start
+ * también limpia de forma oportunista (ver lib/demo/provision). Fail-safe.
  */
 export const dynamic = 'force-dynamic';
 
@@ -16,23 +15,6 @@ export async function GET(request: Request) {
   if (!secret || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-
-  const admin = createAdminClient();
-  const nowIso = new Date().toISOString();
-  const { data: expired } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('is_demo', true)
-    .lt('demo_expires_at', nowIso);
-
-  let deleted = 0;
-  for (const p of expired ?? []) {
-    try {
-      await admin.auth.admin.deleteUser(p.id);
-      deleted += 1;
-    } catch {
-      // Fail-safe: se reintenta en la siguiente corrida.
-    }
-  }
+  const deleted = await cleanupExpiredDemos(500);
   return NextResponse.json({ deleted });
 }
