@@ -2,9 +2,11 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlayCircle } from 'lucide-react';
+import { PlayCircle, TrendingUp } from 'lucide-react';
 import { logWorkout } from '@/lib/student/actions';
 import { Button, FormField, Input, Textarea, YouTubeEmbed } from '@/components/common';
+import { ExerciseProgressChart } from '@/components/workouts/ExerciseProgressChart';
+import type { MaxWeightPoint } from '@/domain/workouts/progression';
 import type { PlanDay } from '@/lib/db/queries/workout-plan';
 
 interface SetState {
@@ -24,10 +26,12 @@ interface ExBlock {
   sets: SetState[];
 }
 
-function buildBlocks(day: PlanDay | undefined): ExBlock[] {
+function buildBlocks(day: PlanDay | undefined, lastWeightByExercise: Record<string, number>): ExBlock[] {
   if (!day) return [];
   return day.exercises.map((ex, bi) => {
     const defaultReps = ex.reps.match(/\d+/)?.[0] ?? '';
+    const last = ex.exercise_id ? lastWeightByExercise[ex.exercise_id] : undefined;
+    const defaultWeight = last != null ? String(last) : ex.suggested_weight_kg != null ? String(ex.suggested_weight_kg) : '';
     return {
       key: ex.id ?? String(bi),
       exerciseId: ex.exercise_id,
@@ -39,7 +43,7 @@ function buildBlocks(day: PlanDay | undefined): ExBlock[] {
       videoUrl: ex.video_url,
       sets: Array.from({ length: Math.max(1, ex.sets) }, () => ({
         reps: defaultReps,
-        weight: ex.suggested_weight_kg != null ? String(ex.suggested_weight_kg) : '',
+        weight: defaultWeight,
         completed: false,
       })),
     };
@@ -49,15 +53,20 @@ function buildBlocks(day: PlanDay | undefined): ExBlock[] {
 export function GuidedWorkoutLogForm({
   workoutPlanId,
   days,
+  lastWeightByExercise,
+  seriesByExercise,
 }: {
   workoutPlanId: string | null;
   days: PlanDay[];
+  lastWeightByExercise: Record<string, number>;
+  seriesByExercise: Record<string, MaxWeightPoint[]>;
 }) {
   const router = useRouter();
   const [dayId, setDayId] = useState(days[0]?.id ?? '');
   const day = useMemo(() => days.find((d) => d.id === dayId), [days, dayId]);
-  const [blocks, setBlocks] = useState<ExBlock[]>(() => buildBlocks(days[0]));
+  const [blocks, setBlocks] = useState<ExBlock[]>(() => buildBlocks(days[0], lastWeightByExercise));
   const [openVideo, setOpenVideo] = useState<string | null>(null);
+  const [openProgress, setOpenProgress] = useState<string | null>(null);
   const [effort, setEffort] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +74,9 @@ export function GuidedWorkoutLogForm({
 
   function selectDay(id: string) {
     setDayId(id);
-    setBlocks(buildBlocks(days.find((d) => d.id === id)));
+    setBlocks(buildBlocks(days.find((d) => d.id === id), lastWeightByExercise));
     setOpenVideo(null);
+    setOpenProgress(null);
   }
   function updateSet(bi: number, si: number, patch: Partial<SetState>) {
     setBlocks((bs) => bs.map((b, i) => (i === bi ? { ...b, sets: b.sets.map((s, j) => (j === si ? { ...s, ...patch } : s)) } : b)));
@@ -140,19 +150,36 @@ export function GuidedWorkoutLogForm({
                 <p className="tabular text-xs text-muted">
                   Objetivo: {b.targetSets}×{b.targetReps}
                   {b.rest ? ` · ${b.rest}s desc.` : ''}
-                  {b.suggested != null ? ` · sug. ${b.suggested}kg` : ''}
+                  {b.suggested != null ? ` · sug. coach ${b.suggested}kg` : ''}
                 </p>
               </div>
-              {b.videoUrl && (
-                <button
-                  type="button"
-                  onClick={() => setOpenVideo(openVideo === b.key ? null : b.key)}
-                  className="inline-flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <PlayCircle className="size-4" /> Técnica
-                </button>
-              )}
+              <div className="flex shrink-0 items-center gap-3">
+                {b.exerciseId && (seriesByExercise[b.exerciseId]?.length ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenProgress(openProgress === b.key ? null : b.key)}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <TrendingUp className="size-4" /> Progreso
+                  </button>
+                )}
+                {b.videoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setOpenVideo(openVideo === b.key ? null : b.key)}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <PlayCircle className="size-4" /> Técnica
+                  </button>
+                )}
+              </div>
             </div>
+
+            {b.exerciseId && openProgress === b.key && (
+              <div className="mt-3 rounded-md border border-hairline bg-canvas/40 p-3">
+                <ExerciseProgressChart series={seriesByExercise[b.exerciseId] ?? []} />
+              </div>
+            )}
 
             {b.videoUrl && openVideo === b.key && (
               <div className="mt-3">

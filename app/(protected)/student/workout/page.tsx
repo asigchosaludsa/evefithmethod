@@ -55,7 +55,12 @@ export default async function StudentWorkoutPage() {
         </CardHeader>
         <CardBody>
           {hasPlan ? (
-            <GuidedWorkoutLogForm workoutPlanId={content?.plan.id ?? null} days={plannedDays} />
+            <GuidedWorkoutLogForm
+              workoutPlanId={content?.plan.id ?? null}
+              days={plannedDays}
+              lastWeightByExercise={{}}
+              seriesByExercise={{}}
+            />
           ) : (
             <>
               <p className="mb-4 text-sm text-muted">
