@@ -10,7 +10,7 @@ export interface CreateFoodDialogProps {
   onCreated: (food: NewFood) => void;
 }
 
-const EMPTY = { name: '', calories: '', protein: '', carbs: '', fat: '' };
+const EMPTY = { name: '', calories: '', protein: '', carbs: '', fat: '', gramsPerUnit: '', unitLabel: '' };
 
 export function CreateFoodDialog({ onCreated }: CreateFoodDialogProps) {
   const [open, setOpen] = React.useState(false);
@@ -36,6 +36,8 @@ export function CreateFoodDialog({ onCreated }: CreateFoodDialogProps) {
         protein: Number(values.protein) || 0,
         carbs: Number(values.carbs) || 0,
         fat: Number(values.fat) || 0,
+        gramsPerUnit: values.gramsPerUnit ? Number(values.gramsPerUnit) : null,
+        unitLabel: values.unitLabel.trim() || null,
       });
       if (res.error || !res.food) {
         setError(res.error ?? 'No se pudo crear el alimento.');
@@ -72,7 +74,8 @@ export function CreateFoodDialog({ onCreated }: CreateFoodDialogProps) {
             Crear alimento
           </Dialog.Title>
           <Dialog.Description className="mt-1.5 text-sm text-muted">
-            Agrega un alimento privado con sus macros por cada 100 g.
+            Agrega un alimento privado con sus macros por cada 100 g. Opcionalmente define una unidad
+            (ej. 1 huevo = 50 g) para registrarlo por piezas.
           </Dialog.Description>
 
           <div className="mt-4 space-y-4">
@@ -130,6 +133,28 @@ export function CreateFoodDialog({ onCreated }: CreateFoodDialogProps) {
                   value={values.fat}
                   onChange={(e) => set('fat', e.target.value)}
                   placeholder="0"
+                />
+              </FormField>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Gramos por unidad (opcional)" htmlFor="cf_gpu">
+                <Input
+                  id="cf_gpu"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  value={values.gramsPerUnit}
+                  onChange={(e) => set('gramsPerUnit', e.target.value)}
+                  placeholder="Ej: 50"
+                />
+              </FormField>
+              <FormField label="Nombre de la unidad (opcional)" htmlFor="cf_ulabel">
+                <Input
+                  id="cf_ulabel"
+                  value={values.unitLabel}
+                  onChange={(e) => set('unitLabel', e.target.value)}
+                  placeholder="Ej: huevo, rebanada"
                 />
               </FormField>
             </div>
