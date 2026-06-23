@@ -23,6 +23,7 @@ import {
 } from '@/domain/workouts/calendar';
 import { Badge, Button, Card, CardBody, EmptyState } from '@/components/common';
 import { toggleSessionStatus } from '@/lib/workouts/session-actions';
+import { coachLogStudentSession } from '@/lib/coach/actions';
 import { exerciseStatusForDay, type LoggedSet } from '@/domain/workouts/progression';
 import { cn } from '@/lib/utils/cn';
 
@@ -44,6 +45,7 @@ export interface TrainingCalendarProps {
   statusByKey: Record<string, LogStatus>;
   setsByKey: Record<string, { exercise_id: string | null; weight_kg: number | null; completed: boolean }[]>;
   canEdit: boolean;
+  coachEdit?: boolean;
   todayISO: string;
 }
 
@@ -64,6 +66,7 @@ export function TrainingCalendar({
   statusByKey,
   setsByKey,
   canEdit,
+  coachEdit = false,
   todayISO,
 }: TrainingCalendarProps) {
   const router = useRouter();
@@ -342,10 +345,91 @@ export function TrainingCalendar({
                 </Button>
               </div>
             )}
+            {coachEdit && plan && (
+              <CoachDayLogger
+                studentId={studentId}
+                planId={plan.id}
+                planDayId={selected.planDay.id}
+                dateISO={selected.dateISO}
+                exercises={exercisesByDay[selected.planDay.id] ?? []}
+                onDone={() => router.refresh()}
+              />
+            )}
             {error && <p className="text-sm text-danger">{error}</p>}
           </CardBody>
         </Card>
       )}
+    </div>
+  );
+}
+
+function CoachDayLogger({
+  studentId,
+  planId,
+  planDayId,
+  dateISO,
+  exercises,
+  onDone,
+}: {
+  studentId: string;
+  planId: string | null;
+  planDayId: string;
+  dateISO: string;
+  exercises: { exercise_id: string | null; name: string; sets: number; reps: string }[];
+  onDone: () => void;
+}) {
+  const [rows, setRows] = React.useState(
+    exercises.map((e) => ({ exerciseId: e.exercise_id, name: e.name, weight: '', reps: e.reps.match(/\d+/)?.[0] ?? '' })),
+  );
+  const [pending, start] = React.useTransition();
+  const [err, setErr] = React.useState<string | null>(null);
+
+  function save() {
+    setErr(null);
+    const sets = rows.map((r, i) => ({
+      exerciseId: r.exerciseId,
+      setNumber: i + 1,
+      reps: r.reps ? Number(r.reps) : null,
+      weight: r.weight ? Number(r.weight) : null,
+      completed: true,
+    }));
+    start(async () => {
+      const res = await coachLogStudentSession({ studentId, planId, planDayId, dateISO, sets });
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      onDone();
+    });
+  }
+
+  return (
+    <div className="mt-3 space-y-2 rounded-md border border-hairline p-3">
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="flex-1 truncate text-sm text-foreground">{r.name}</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder="reps"
+            value={r.reps}
+            onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))}
+            className="h-9 w-16 rounded-md border border-border bg-canvas px-2 text-sm"
+          />
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder="kg"
+            value={r.weight}
+            onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, weight: e.target.value } : x)))}
+            className="h-9 w-16 rounded-md border border-border bg-canvas px-2 text-sm"
+          />
+        </div>
+      ))}
+      {err && <p className="text-sm text-danger">{err}</p>}
+      <Button onClick={save} loading={pending} size="sm" variant="secondary" className="w-full">
+        Guardar por la alumna
+      </Button>
     </div>
   );
 }

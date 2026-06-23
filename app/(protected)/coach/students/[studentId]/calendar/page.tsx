@@ -41,6 +41,7 @@ export default async function CoachStudentCalendarPage({
         statusByKey={data.statusByKey}
         setsByKey={data.setsByKey}
         canEdit
+        coachEdit
         todayISO={todayISO}
       />
     </div>
