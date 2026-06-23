@@ -1,4 +1,4 @@
-import { Apple, Check, Dumbbell, Flame, LineChart, X } from 'lucide-react';
+import { Apple, Camera, Check, Dumbbell, Flame, LineChart, X } from 'lucide-react';
 import { Reveal } from '@/components/marketing/Reveal';
 import { DemoButton } from './DemoButton';
 
@@ -226,7 +226,7 @@ function MealsPreview() {
 /* --- (e) Antes / después ----------------------------------------------------- */
 function PhotosPreview() {
   return (
-    <PreviewFrame title="Fotos de progreso" icon={LineChart}>
+    <PreviewFrame title="Fotos de progreso" icon={Camera}>
       <div className="grid grid-cols-2 gap-3">
         {[
           { tag: 'Antes', wk: 'Semana 1' },
