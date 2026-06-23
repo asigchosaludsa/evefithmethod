@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/common';
+import { DemoButton } from '@/components/landing/DemoButton';
 import { AppMockupHero } from './AppMockupHero';
 import { HeroBackgroundVideo } from './HeroBackgroundVideo';
 
@@ -87,18 +88,25 @@ export function Hero() {
             real, método eficaz, resultados garantizados.
           </p>
           <div
-            className="hero-rise mt-8 flex flex-col gap-3 sm:flex-row"
+            className="hero-rise mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
             style={{ '--i': 3 } as React.CSSProperties}
           >
-            <Button asChild size="lg">
+            <Button asChild size="lg" className="btn-sheen btn-cta-glow">
               <Link href="/solicitud">
                 Empieza ya <ArrowRight className="size-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/login">Ya soy alumna</Link>
-            </Button>
+            <DemoButton size="lg" />
           </div>
+          <p
+            className="hero-rise mt-3 text-sm text-muted"
+            style={{ '--i': 4 } as React.CSSProperties}
+          >
+            ¿Ya eres alumna?{' '}
+            <Link href="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Ingresa aquí
+            </Link>
+          </p>
         </div>
 
         <div className="hero-rise" style={{ '--i': 2 } as React.CSSProperties}>
