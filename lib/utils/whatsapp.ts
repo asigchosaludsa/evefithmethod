@@ -30,14 +30,18 @@ export interface WhatsappInviteHrefInput {
   link: string;
 }
 
+/** Mínimo de dígitos de un número válido (código de país + abonado). Evita
+ *  abrir wa.me solo con el código de país (p.ej. "593"). */
+const MIN_WHATSAPP_DIGITS = 8;
+
 /**
  * Build a ready-to-open `wa.me` href with the invitation message URL-encoded.
- * Returns `null` when the phone has no digits (so the UI can disable the button
- * instead of opening an invalid link).
+ * Returns `null` when the phone is missing or too short (so the UI can disable
+ * the button instead of opening an invalid link like wa.me/593).
  */
 export function buildWhatsappInviteHref({ phone, studentName, link }: WhatsappInviteHrefInput): string | null {
   const digits = normalizeWhatsappNumber(phone);
-  if (!digits) return null;
+  if (digits.length < MIN_WHATSAPP_DIGITS) return null;
   const message = buildWhatsappInviteMessage(studentName, link);
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
