@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Dumbbell, Moon, Plus, Scale } from 'lucide-react';
+import { CheckCircle2, Dumbbell, Flame, Moon, Plus, Scale, Utensils } from 'lucide-react';
 import { requireStudent } from '@/lib/auth/roles';
 import { getStudentToday } from '@/lib/db/queries/student';
 import { getTrainingCalendarData } from '@/lib/db/queries/training-calendar';
@@ -12,11 +12,11 @@ import {
   CardBody,
   CardHeader,
   CardTitle,
-  EmptyState,
   PageHeader,
 } from '@/components/common';
 import { MacroProgress } from '@/components/student/MacroProgress';
 import { MacroRescuePanel } from '@/components/student/MacroRescuePanel';
+import { CoachTipCard } from '@/components/student/CoachTipCard';
 import { SessionCompleteCard, type SessionExerciseLine } from '@/components/workouts/SessionCompleteCard';
 
 export const metadata = { title: 'Hoy' };
@@ -77,39 +77,113 @@ export default async function StudentTodayPage() {
     fat_g: plan?.fat_target_g ?? null,
   };
 
+  // --- Hero "resumen de hoy" (a partir de los datos ya cargados) ---
+  const trainingSummary: { label: string; icon: typeof Dumbbell; tone: 'primary' | 'success' | 'muted' } =
+    !calendar.plan
+      ? { label: 'Sin plan', icon: Moon, tone: 'muted' }
+      : todayDone
+        ? { label: todayStatus === 'skipped' ? 'No hecho' : 'Completado', icon: CheckCircle2, tone: 'success' }
+        : todayPlanDay
+          ? { label: 'Hoy te toca', icon: Dumbbell, tone: 'primary' }
+          : { label: 'Descanso', icon: Moon, tone: 'muted' };
+
+  const consumedKcal = Math.round(today.consumed.calories);
+  const nutritionValue = consumedKcal > 0 || target.calories ? `${consumedKcal}` : '—';
+  const nutritionSub = target.calories ? `de ${target.calories} kcal` : 'kcal hoy';
+
+  const heroItems = [
+    {
+      key: 'training',
+      icon: trainingSummary.icon,
+      tone: trainingSummary.tone,
+      label: 'Entrenamiento',
+      value: trainingSummary.label,
+      sub: streak > 0 ? `Racha de ${streak} ${streak === 1 ? 'día' : 'días'}` : 'Hoy',
+      streak: streak > 0,
+    },
+    {
+      key: 'nutrition',
+      icon: Utensils,
+      tone: 'primary' as const,
+      label: 'Nutrición',
+      value: nutritionValue,
+      sub: nutritionSub,
+      streak: false,
+    },
+    {
+      key: 'weight',
+      icon: Scale,
+      tone: 'muted' as const,
+      label: 'Peso actual',
+      value: today.lastWeightKg ? `${today.lastWeightKg}` : '—',
+      sub: today.lastWeightKg ? 'kg' : 'sin registro',
+      streak: false,
+    },
+  ];
+
+  const toneClass = (tone: 'primary' | 'success' | 'muted') =>
+    tone === 'primary'
+      ? 'text-primary'
+      : tone === 'success'
+        ? 'text-success'
+        : 'text-muted';
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Hoy"
-        title={`Hola, ${profile.full_name?.split(' ')[0] ?? ''}`}
-        description="Esto es lo que toca hoy."
-        actions={
-          <Button asChild>
-            <Link href="/student/meals/new">
-              <Plus className="size-4" /> Registrar comida
-            </Link>
-          </Button>
-        }
-      />
+      <div className="efm-fade-up" style={{ ['--efm-step' as string]: 0 }}>
+        <PageHeader
+          eyebrow="Hoy"
+          title={`Hola, ${profile.full_name?.split(' ')[0] ?? ''}`}
+          description="Esto es lo que toca hoy."
+          actions={
+            <Button asChild>
+              <Link href="/student/meals/new">
+                <Plus className="size-4" /> Registrar comida
+              </Link>
+            </Button>
+          }
+        />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{plan ? plan.title : 'Nutrición'}</CardTitle>
-        </CardHeader>
-        <CardBody className="space-y-4">
-          {plan ? (
-            <MacroProgress consumed={today.consumed} target={target} />
-          ) : (
-            <p className="text-sm text-muted">
-              Aún no tienes un plan nutricional activo. Tu coach lo asignará pronto.
-            </p>
-          )}
-          {plan && <MacroRescuePanel consumed={today.consumed} target={target} />}
-        </CardBody>
-      </Card>
+      {/* Hero "resumen de hoy": entreno · nutrición · peso. */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {heroItems.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <Card
+              key={item.key}
+              className="efm-fade-up flex items-center gap-3 px-4 py-3.5"
+              style={{ ['--efm-step' as string]: i + 1 }}
+            >
+              <div
+                className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-elevated ${toneClass(item.tone)}`}
+              >
+                <Icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-faint">{item.label}</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="tabular text-lg font-bold leading-tight text-foreground">{item.value}</span>
+                  {item.streak ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                      <Flame className="size-3" /> {item.sub}
+                    </span>
+                  ) : (
+                    <span className="truncate text-xs text-muted">{item.sub}</span>
+                  )}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
+      {/* Fila de 2 columnas: entrenamiento de hoy · tip de la coach. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card
+          className="efm-fade-up"
+          style={{ ['--efm-step' as string]: 4 }}
+        >
           <CardHeader>
             <CardTitle>{todayDone ? 'Tu entrenamiento de hoy' : 'Hoy te toca'}</CardTitle>
           </CardHeader>
@@ -156,39 +230,34 @@ export default async function StudentTodayPage() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Tu peso</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Scale className="size-4 text-muted" />
-              <span className="tabular text-2xl font-bold text-foreground">
-                {today.lastWeightKg ? `${today.lastWeightKg} kg` : '—'}
-              </span>
-            </div>
-            <Button asChild variant="secondary" size="sm">
-              <Link href="/student/progress">Registrar peso</Link>
-            </Button>
-          </CardBody>
-        </Card>
+        <div className="efm-fade-up" style={{ ['--efm-step' as string]: 5 }}>
+          <CoachTipCard tip={today.assignedTip} />
+        </div>
       </div>
 
-      {today.assignedTip ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tip de tu coach</CardTitle>
-          </CardHeader>
-          <CardBody>
-            <Link href="/student/content" className="group block">
-              <p className="font-medium text-foreground group-hover:text-primary">{today.assignedTip.title}</p>
-              {today.assignedTip.summary && <p className="mt-1 text-sm text-muted">{today.assignedTip.summary}</p>}
-            </Link>
-          </CardBody>
-        </Card>
-      ) : (
-        <EmptyState title="Sin tips nuevos" description="Tu coach te asignará contenido pronto." />
-      )}
+      {/* Nutrición a todo el ancho + registrar peso. */}
+      <Card className="efm-fade-up" style={{ ['--efm-step' as string]: 6 }}>
+        <CardHeader>
+          <CardTitle>{plan ? plan.title : 'Nutrición'}</CardTitle>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          {plan ? (
+            <MacroProgress consumed={today.consumed} target={target} />
+          ) : (
+            <p className="text-sm text-muted">
+              Aún no tienes un plan nutricional activo. Tu coach lo asignará pronto.
+            </p>
+          )}
+          {plan && <MacroRescuePanel consumed={today.consumed} target={target} />}
+          <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/student/progress">
+                <Scale className="size-4" /> Registrar peso
+              </Link>
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }
