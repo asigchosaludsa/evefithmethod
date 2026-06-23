@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { provisionDemoStudent } from '@/lib/demo/provision';
 
@@ -28,6 +29,11 @@ export async function POST(request: Request) {
     options: { captchaToken },
   });
   if (error) {
+    // Evitar cuenta huérfana: si el login falla (p. ej. captcha inválido), borra
+    // la cuenta desechable recién provisionada (no esperar al cron).
+    try {
+      await createAdminClient().auth.admin.deleteUser(prov.userId);
+    } catch {}
     return NextResponse.json(
       {
         error: /captcha/i.test(error.message)

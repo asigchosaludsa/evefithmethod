@@ -15,7 +15,7 @@ export interface DemoCredentials {
  * El llamador (route handler) hace el signIn con el token de captcha.
  */
 export async function provisionDemoStudent(): Promise<
-  { ok: true; creds: DemoCredentials } | { ok: false; error: string }
+  { ok: true; creds: DemoCredentials; userId: string } | { ok: false; error: string }
 > {
   const admin = createAdminClient();
 
@@ -60,5 +60,5 @@ export async function provisionDemoStudent(): Promise<
     return { ok: false, error: 'No se pudo preparar la demo.' };
   }
 
-  return { ok: true, creds: { email, password } };
+  return { ok: true, creds: { email, password }, userId: newId };
 }
