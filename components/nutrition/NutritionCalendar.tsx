@@ -6,6 +6,7 @@ import { WEEKDAYS, addDaysISO, monthGridISO, startOfWeekISO } from '@/domain/wor
 import { dayAdherence, type DayAdherence } from '@/domain/nutrition/adherence';
 import type { NutritionDayTotals } from '@/lib/db/queries/student-nutrition';
 import { Button, Card, CardBody } from '@/components/common';
+import { MacroLine, MacroLegend } from '@/components/nutrition/MacroLine';
 import { cn } from '@/lib/utils/cn';
 
 const MONTHS = [
@@ -191,17 +192,15 @@ export function NutritionCalendar({
             </div>
 
             {selectedTotals?.hasLogs ? (
-              <div className="space-y-1 text-sm">
+              <div className="space-y-2 text-sm">
                 <p className="tabular text-foreground">
                   {selectedTotals.consumed.calories} kcal
                   {target.calories != null && target.calories > 0 && (
                     <span className="text-muted"> / {target.calories} kcal meta</span>
                   )}
                 </p>
-                <p className="tabular text-xs text-muted">
-                  P {selectedTotals.consumed.protein_g}g · C {selectedTotals.consumed.carbs_g}g · G{' '}
-                  {selectedTotals.consumed.fat_g}g
-                </p>
+                <MacroLine macros={selectedTotals.consumed} unit="g" className="text-xs" />
+                <MacroLegend className="pt-1" />
               </div>
             ) : (
               <p className="text-sm text-muted">Sin registros este día.</p>

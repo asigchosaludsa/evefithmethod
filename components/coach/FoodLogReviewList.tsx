@@ -1,6 +1,7 @@
 import { Check, Flag } from 'lucide-react';
 import { reviewFoodLog } from '@/lib/coach/actions';
 import { Badge, EmptyState } from '@/components/common';
+import { MacroLine } from '@/components/nutrition/MacroLine';
 import { formatDateTime } from '@/lib/utils/date';
 import type { MealLogSummary } from '@/lib/db/queries/student-nutrition';
 
@@ -44,9 +45,10 @@ export function FoodLogReviewList({ meals }: { meals: MealLogSummary[] }) {
               {statusBadge(m.review_status)}
             </div>
             <p className="text-xs text-faint">{formatDateTime(m.logged_at)}</p>
-            <p className="tabular text-sm text-muted">
-              {m.totals.calories} kcal · P {m.totals.protein_g} · C {m.totals.carbs_g} · G{' '}
-              {m.totals.fat_g}
+            <p className="text-sm">
+              <span className="tabular text-muted">{m.totals.calories} kcal</span>
+              <span className="mx-1.5 text-faint">·</span>
+              <MacroLine macros={m.totals} className="text-sm" />
             </p>
           </div>
 

@@ -6,6 +6,8 @@ import { Button, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader, 
 import { getStudentNutritionRange } from '@/lib/db/queries/student-nutrition';
 import { NutritionCalendar } from '@/components/nutrition/NutritionCalendar';
 import { NutritionAdherenceChart, type AdherencePoint } from '@/components/nutrition/NutritionAdherenceChart';
+import { MacroLegend } from '@/components/nutrition/MacroLine';
+import { macroTextClass } from '@/lib/nutrition/macro-display';
 import { addDaysISO } from '@/domain/workouts/calendar';
 
 export const metadata = { title: 'Mi nutrición' };
@@ -51,11 +53,26 @@ export default async function StudentNutritionPlanPage() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard label="Calorías" value={plan.calories_target ?? '—'} hint="kcal/día" tone="primary" />
-            <StatCard label="Proteína" value={plan.protein_target_g != null ? `${plan.protein_target_g} g` : '—'} />
-            <StatCard label="Carbos" value={plan.carbs_target_g != null ? `${plan.carbs_target_g} g` : '—'} />
-            <StatCard label="Grasas" value={plan.fat_target_g != null ? `${plan.fat_target_g} g` : '—'} />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard label="Calorías" value={plan.calories_target ?? '—'} hint="kcal/día" tone="primary" />
+              <StatCard
+                label="Proteína"
+                value={plan.protein_target_g != null ? `${plan.protein_target_g} g` : '—'}
+                valueClassName={macroTextClass('protein_g')}
+              />
+              <StatCard
+                label="Carbohidratos"
+                value={plan.carbs_target_g != null ? `${plan.carbs_target_g} g` : '—'}
+                valueClassName={macroTextClass('carbs_g')}
+              />
+              <StatCard
+                label="Grasa"
+                value={plan.fat_target_g != null ? `${plan.fat_target_g} g` : '—'}
+                valueClassName={macroTextClass('fat_g')}
+              />
+            </div>
+            <MacroLegend />
           </div>
 
           <Card>

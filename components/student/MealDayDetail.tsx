@@ -7,6 +7,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { deleteFoodLog } from '@/lib/student/actions';
 import { formatQuantity, type FoodUnit } from '@/domain/nutrition/units';
 import { Badge, Button, ConfirmDialog } from '@/components/common';
+import { MacroLine, MacroLegend } from '@/components/nutrition/MacroLine';
 import type { MealDetail, StudentMealsDay } from '@/lib/db/queries/student-nutrition';
 
 const MEAL_LABELS: Record<string, string> = {
@@ -46,9 +47,8 @@ export function MealDayDetail({ day }: { day: StudentMealsDay }) {
             <span className="text-sm font-normal text-muted"> / {target.calories} kcal meta</span>
           )}
         </p>
-        <p className="tabular text-sm text-muted">
-          P {consumed.protein_g}g · C {consumed.carbs_g}g · G {consumed.fat_g}g
-        </p>
+        <MacroLine macros={consumed} unit="g" className="text-sm" />
+        <MacroLegend className="mt-3 border-t border-hairline pt-3" />
       </div>
 
       <ul className="space-y-3">
@@ -129,8 +129,10 @@ function MealCard({ meal }: { meal: MealDetail }) {
         </ul>
       )}
 
-      <p className="tabular mt-3 text-xs text-muted">
-        {meal.totals.calories} kcal · P {meal.totals.protein_g} · C {meal.totals.carbs_g} · G {meal.totals.fat_g}
+      <p className="mt-3 text-xs">
+        <span className="tabular text-muted">{meal.totals.calories} kcal</span>
+        <span className="mx-1.5 text-faint">·</span>
+        <MacroLine macros={meal.totals} className="text-xs" />
       </p>
 
       {meal.notes && <p className="mt-2 text-xs italic text-faint">{meal.notes}</p>}

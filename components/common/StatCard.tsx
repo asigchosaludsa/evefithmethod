@@ -8,6 +8,8 @@ export interface StatCardProps {
   hint?: string;
   icon?: LucideIcon;
   tone?: 'default' | 'primary' | 'success' | 'warning';
+  /** Clase extra para el valor (p.ej. color de macro). Por defecto foreground. */
+  valueClassName?: string;
   className?: string;
 }
 
@@ -18,7 +20,15 @@ const TONE_ICON: Record<NonNullable<StatCardProps['tone']>, string> = {
   warning: 'text-warning bg-warning/12',
 };
 
-export function StatCard({ label, value, hint, icon: Icon, tone = 'default', className }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = 'default',
+  valueClassName,
+  className,
+}: StatCardProps) {
   return (
     <div className={cn('rounded-lg border border-border bg-surface p-4', className)}>
       <div className="flex items-start justify-between gap-2">
@@ -29,7 +39,9 @@ export function StatCard({ label, value, hint, icon: Icon, tone = 'default', cla
           </span>
         )}
       </div>
-      <p className="tabular mt-2 font-display text-2xl font-bold text-foreground">{value}</p>
+      <p className={cn('tabular mt-2 font-display text-2xl font-bold text-foreground', valueClassName)}>
+        {value}
+      </p>
       {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>
   );

@@ -1,5 +1,6 @@
 import { ProgressRing } from '@/components/common';
 import { calculateMacroProgress } from '@/domain/nutrition/calculations';
+import { MACROS } from '@/lib/nutrition/macro-display';
 import type { Macros } from '@/types/app';
 
 interface Target {
@@ -54,9 +55,15 @@ export function MacroProgress({ consumed, target }: { consumed: Macros; target: 
         </span>
       </ProgressRing>
       <div className="w-full flex-1 space-y-3">
-        <Bar label="Proteína" consumed={consumed.protein_g} target={target.protein_g} color="var(--color-info)" />
-        <Bar label="Carbohidratos" consumed={consumed.carbs_g} target={target.carbs_g} color="var(--color-warning)" />
-        <Bar label="Grasas" consumed={consumed.fat_g} target={target.fat_g} color="var(--color-success)" />
+        {MACROS.map((m) => (
+          <Bar
+            key={m.key}
+            label={m.label}
+            consumed={consumed[m.key]}
+            target={target[m.key]}
+            color={m.colorVar}
+          />
+        ))}
       </div>
     </div>
   );

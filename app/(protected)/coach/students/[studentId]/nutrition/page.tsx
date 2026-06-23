@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { NutritionPlanForm } from '@/components/coach/NutritionPlanForm';
 import { FoodLogReviewList } from '@/components/coach/FoodLogReviewList';
+import { MacroLegend } from '@/components/nutrition/MacroLine';
 import { ArchivePlanButton } from '@/components/coach/ArchivePlanButton';
 import { getStudentNutritionDay, getStudentNutritionRange } from '@/lib/db/queries/student-nutrition';
 import { calculateMacroProgress } from '@/domain/nutrition/calculations';
@@ -51,16 +52,28 @@ export default async function StudentNutritionPage({
           <CardTitle>Registros de comida (hoy)</CardTitle>
         </CardHeader>
         <CardBody className="space-y-4">
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <p className="tabular text-sm text-foreground">
-              <span className="font-semibold">{day.consumed.calories}</span>
-              <span className="text-muted"> / {day.target.calories ?? '—'} kcal</span>
-              {day.target.calories ? <span className="text-faint"> · {calProgress.pct}%</span> : null}
-            </p>
-            <p className="tabular text-sm text-muted">
-              P {day.consumed.protein_g}/{day.target.protein_g ?? '—'} · C {day.consumed.carbs_g}/
-              {day.target.carbs_g ?? '—'} · G {day.consumed.fat_g}/{day.target.fat_g ?? '—'}
-            </p>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <p className="tabular text-sm text-foreground">
+                <span className="font-semibold">{day.consumed.calories}</span>
+                <span className="text-muted"> / {day.target.calories ?? '—'} kcal</span>
+                {day.target.calories ? <span className="text-faint"> · {calProgress.pct}%</span> : null}
+              </p>
+              <p className="tabular text-sm">
+                <span className="text-info">
+                  P {day.consumed.protein_g}/{day.target.protein_g ?? '—'}
+                </span>
+                <span className="mx-1.5 text-faint">·</span>
+                <span className="text-warning">
+                  C {day.consumed.carbs_g}/{day.target.carbs_g ?? '—'}
+                </span>
+                <span className="mx-1.5 text-faint">·</span>
+                <span className="text-success">
+                  G {day.consumed.fat_g}/{day.target.fat_g ?? '—'}
+                </span>
+              </p>
+            </div>
+            <MacroLegend />
           </div>
           <FoodLogReviewList meals={day.meals} />
         </CardBody>
@@ -96,9 +109,14 @@ export default async function StudentNutritionPage({
                       <ArchivePlanButton planId={p.id} studentId={studentId} kind="nutrition" archived={false} />
                     </div>
                   </div>
-                  <p className="mt-1 text-sm text-muted">
-                    {p.calories_target ?? '—'} kcal · P {p.protein_target_g ?? '—'} · C {p.carbs_target_g ?? '—'} · G{' '}
-                    {p.fat_target_g ?? '—'}
+                  <p className="mt-1 text-sm">
+                    <span className="text-muted">{p.calories_target ?? '—'} kcal</span>
+                    <span className="mx-1.5 text-faint">·</span>
+                    <span className="text-info">P {p.protein_target_g ?? '—'}</span>
+                    <span className="mx-1.5 text-faint">·</span>
+                    <span className="text-warning">C {p.carbs_target_g ?? '—'}</span>
+                    <span className="mx-1.5 text-faint">·</span>
+                    <span className="text-success">G {p.fat_target_g ?? '—'}</span>
                   </p>
                   <p className="mt-1 text-xs text-faint">Creado {formatDate(p.created_at)}</p>
                 </li>
@@ -119,9 +137,14 @@ export default async function StudentNutritionPage({
                         <ArchivePlanButton planId={p.id} studentId={studentId} kind="nutrition" archived />
                       </div>
                     </div>
-                    <p className="mt-1 text-sm text-muted">
-                      {p.calories_target ?? '—'} kcal · P {p.protein_target_g ?? '—'} · C {p.carbs_target_g ?? '—'} · G{' '}
-                      {p.fat_target_g ?? '—'}
+                    <p className="mt-1 text-sm">
+                      <span className="text-muted">{p.calories_target ?? '—'} kcal</span>
+                      <span className="mx-1.5 text-faint">·</span>
+                      <span className="text-info">P {p.protein_target_g ?? '—'}</span>
+                      <span className="mx-1.5 text-faint">·</span>
+                      <span className="text-warning">C {p.carbs_target_g ?? '—'}</span>
+                      <span className="mx-1.5 text-faint">·</span>
+                      <span className="text-success">G {p.fat_target_g ?? '—'}</span>
                     </p>
                     <p className="mt-1 text-xs text-faint">Creado {formatDate(p.created_at)}</p>
                   </li>
