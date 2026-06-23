@@ -18,6 +18,7 @@ export interface CalendarPlanDay {
 }
 
 export interface CalendarExercise {
+  exercise_id: string | null;
   name: string;
   sets: number;
   reps: string;
@@ -26,12 +27,20 @@ export interface CalendarExercise {
 
 export type CalendarLogStatus = 'completed' | 'skipped' | 'started';
 
+export interface LoggedSessionSet {
+  exercise_id: string | null;
+  weight_kg: number | null;
+  completed: boolean;
+}
+
 export interface TrainingCalendarData {
   plan: CalendarPlan | null;
   days: CalendarPlanDay[];
   exercisesByDay: Record<string, CalendarExercise[]>;
   /** Map keyed by `${planDayId}|${dateISO}` -> log status. */
   statusByKey: Record<string, CalendarLogStatus>;
+  /** Map keyed by `${planDayId}|${dateISO}` -> sets registrados de esa sesión. */
+  setsByKey: Record<string, LoggedSessionSet[]>;
 }
 
 /**
@@ -53,7 +62,7 @@ export async function getTrainingCalendarData(studentId: string): Promise<Traini
     .maybeSingle();
 
   if (!plan) {
-    return { plan: null, days: [], exercisesByDay: {}, statusByKey: {} };
+    return { plan: null, days: [], exercisesByDay: {}, statusByKey: {}, setsByKey: {} };
   }
 
   const [{ data: days }, { data: logs }] = await Promise.all([
@@ -92,6 +101,7 @@ export async function getTrainingCalendarData(studentId: string): Promise<Traini
   for (const pe of planExercises ?? []) {
     const arr = exercisesByDay[pe.workout_plan_day_id] ?? [];
     arr.push({
+      exercise_id: pe.exercise_id,
       name: pe.exercise_id ? (exMap.get(pe.exercise_id) ?? 'Ejercicio (eliminado)') : 'Ejercicio',
       sets: pe.sets,
       reps: pe.reps,
@@ -105,6 +115,29 @@ export async function getTrainingCalendarData(studentId: string): Promise<Traini
     if (!log.session_date || !log.workout_plan_day_id) continue;
     statusByKey[`${log.workout_plan_day_id}|${log.session_date}`] =
       log.status as CalendarLogStatus;
+  }
+
+  // Sets de cada sesión registrada, para derivar ✓/✗ por ejercicio.
+  const logIdToKey = new Map<string, string>();
+  for (const log of logs ?? []) {
+    if (!log.session_date || !log.workout_plan_day_id) continue;
+    logIdToKey.set(log.id, `${log.workout_plan_day_id}|${log.session_date}`);
+  }
+  const logIds = [...logIdToKey.keys()];
+  const { data: logSets } = logIds.length
+    ? await supabase
+        .from('workout_log_sets')
+        .select('workout_log_id, exercise_id, weight_kg, completed')
+        .in('workout_log_id', logIds)
+    : { data: [] };
+
+  const setsByKey: Record<string, LoggedSessionSet[]> = {};
+  for (const s of logSets ?? []) {
+    const k = logIdToKey.get(s.workout_log_id);
+    if (!k) continue;
+    const arr = setsByKey[k] ?? [];
+    arr.push({ exercise_id: s.exercise_id, weight_kg: s.weight_kg, completed: s.completed });
+    setsByKey[k] = arr;
   }
 
   return {
@@ -124,5 +157,6 @@ export async function getTrainingCalendarData(studentId: string): Promise<Traini
     })),
     exercisesByDay,
     statusByKey,
+    setsByKey,
   };
 }
