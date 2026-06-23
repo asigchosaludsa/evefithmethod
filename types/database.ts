@@ -40,6 +40,8 @@ type ProfilesRow = {
   status: AccountStatus;
   email_confirmed_at: Timestamp | null;
   onboarding_completed: boolean;
+  is_demo: boolean;
+  demo_expires_at: Timestamp | null;
   created_at: Timestamp;
   updated_at: Timestamp;
 };
@@ -53,6 +55,8 @@ type ProfilesInsert = {
   status?: AccountStatus;
   email_confirmed_at?: Timestamp | null;
   onboarding_completed?: boolean;
+  is_demo?: boolean;
+  demo_expires_at?: Timestamp | null;
   created_at?: Timestamp;
   updated_at?: Timestamp;
 };
@@ -818,6 +822,14 @@ export type Database = {
       check_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number };
         Returns: boolean;
+      };
+      set_demo_profile: {
+        Args: { p_id: string; p_expires: string };
+        Returns: undefined;
+      };
+      clone_demo_student: {
+        Args: { template_id: string; new_id: string };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;
