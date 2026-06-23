@@ -13,6 +13,7 @@ import { nutritionPlanSchema } from '@/domain/nutrition/schemas';
 import { workoutPlanSchema } from '@/domain/workouts/schemas';
 import { resolveSplitDays } from '@/domain/workouts/splits';
 import { addDaysISO, planActiveWindow } from '@/domain/workouts/calendar';
+import { upsertWorkoutSession } from '@/lib/workouts/log-session';
 
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? 'Revisa los datos ingresados.';
@@ -672,4 +673,35 @@ export async function deletePlanExercise(id: string, planId: string): Promise<vo
     .eq('id', id)
     .in('workout_plan_day_id', dayIds);
   revalidatePath(`/coach/workouts/plans/${planId}`);
+}
+
+export async function coachLogStudentSession(input: {
+  studentId: string;
+  planId: string | null;
+  planDayId: string | null;
+  dateISO: string;
+  perceivedEffort?: number | null;
+  notes?: string | null;
+  sets: { exerciseId: string | null; setNumber: number; reps: number | null; weight: number | null; completed: boolean }[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const coach = await requireCoach();
+  await assertCoachOwnsStudent(coach.id, input.studentId);
+
+  const admin = createAdminClient();
+  const { error } = await upsertWorkoutSession(admin, {
+    studentId: input.studentId,
+    coachId: coach.id,
+    planId: input.planId,
+    planDayId: input.planDayId,
+    sessionDateISO: input.dateISO,
+    status: 'completed',
+    perceivedEffort: input.perceivedEffort ?? null,
+    notes: input.notes ?? null,
+    sets: input.sets,
+  });
+  if (error) return { ok: false, error };
+
+  revalidatePath(`/coach/students/${input.studentId}/calendar`);
+  revalidatePath('/student/today');
+  return { ok: true };
 }
