@@ -102,3 +102,12 @@ begin
   select coach_id, new_id, content_post_id, assigned_at, read_at from content_assignments where student_id = template_id;
 end;
 $$;
+
+-- SEGURIDAD: estas funciones SECURITY DEFINER solo deben invocarse desde el
+-- servidor con la service-role key (provisión de demo). Si quedaran ejecutables
+-- por anon/authenticated, una alumna podría clonar datos de otra a su cuenta o
+-- auto-marcarse is_demo (y el cron la borraría). Revocamos el execute público.
+revoke execute on function public.set_demo_profile(uuid, timestamptz) from public, anon, authenticated;
+revoke execute on function public.clone_demo_student(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.set_demo_profile(uuid, timestamptz) to service_role;
+grant execute on function public.clone_demo_student(uuid, uuid) to service_role;
