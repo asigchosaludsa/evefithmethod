@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getStudentCoachId } from '@/lib/db/queries/student';
 import { getActiveWorkoutPlanContent } from '@/lib/db/queries/workout-plan';
 import { getTrainingCalendarData } from '@/lib/db/queries/training-calendar';
+import { getExerciseProgression } from '@/lib/db/queries/exercise-progression';
 import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
 import { GuidedWorkoutLogForm } from '@/components/student/GuidedWorkoutLogForm';
 import { WorkoutLogForm } from '@/components/student/WorkoutLogForm';
@@ -38,6 +39,11 @@ export default async function StudentWorkoutPage() {
   const hasPlan = plannedDays.length > 0;
   const todayISO = new Date().toISOString().slice(0, 10);
 
+  const planExerciseIds = [
+    ...new Set(plannedDays.flatMap((d) => d.exercises.map((e) => e.exercise_id).filter((x): x is string => !!x))),
+  ];
+  const progression = await getExerciseProgression(profile.id, planExerciseIds);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -58,8 +64,8 @@ export default async function StudentWorkoutPage() {
             <GuidedWorkoutLogForm
               workoutPlanId={content?.plan.id ?? null}
               days={plannedDays}
-              lastWeightByExercise={{}}
-              seriesByExercise={{}}
+              lastWeightByExercise={progression.lastWeightByExercise}
+              seriesByExercise={progression.seriesByExercise}
             />
           ) : (
             <>
