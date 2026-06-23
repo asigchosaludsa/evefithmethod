@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, Search, Trash2 } from 'lucide-react';
+import { Camera, Check, Globe, Loader2, Search, Trash2 } from 'lucide-react';
 import { logFood, updateFoodLog } from '@/lib/student/actions';
 import { createClient } from '@/lib/supabase/client';
 import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
@@ -10,6 +10,12 @@ import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/cal
 import { toGrams, availableUnits, type FoodUnit } from '@/domain/nutrition/units';
 import { Button, FormField, Input, Select, Textarea } from '@/components/common';
 import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
+import { MacroLine, MacroLegend } from '@/components/nutrition/MacroLine';
+import {
+  searchOpenFoodFacts,
+  importOpenFoodFactsItem,
+  type OffProduct,
+} from '@/lib/nutrition/openfoodfacts';
 import type { NewFood } from '@/lib/student/food-actions';
 import type { MealType } from '@/types/app';
 
@@ -81,6 +87,12 @@ export function FoodLogForm({
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
 
+  // --- Búsqueda en Open Food Facts (base mundial, fail-soft) ---
+  const [offResults, setOffResults] = useState<OffProduct[]>([]);
+  const [offLoading, setOffLoading] = useState(false);
+  const [importingCode, setImportingCode] = useState<string | null>(null);
+  const offReqId = useRef(0);
+
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -130,14 +142,70 @@ export function FoodLogForm({
     [lines, foodMap],
   );
 
+  // Búsqueda OFF con debounce (~400ms) cuando la consulta tiene ≥ 3 caracteres.
+  // Todo `setState` ocurre dentro del timer (asíncrono), no en el cuerpo del
+  // efecto, para no disparar renders en cascada.
+  useEffect(() => {
+    const term = q.trim();
+    const reqId = ++offReqId.current;
+
+    if (term.length < 3) {
+      // Limpia resultados en una microtarea; evita setState síncrono en el efecto.
+      const clear = setTimeout(() => {
+        if (offReqId.current !== reqId) return;
+        setOffResults([]);
+        setOffLoading(false);
+      }, 0);
+      return () => clearTimeout(clear);
+    }
+
+    const start = setTimeout(() => {
+      if (offReqId.current === reqId) setOffLoading(true);
+    }, 0);
+
+    const handle = setTimeout(async () => {
+      try {
+        const results = await searchOpenFoodFacts(term);
+        // Ignora respuestas de búsquedas obsoletas (la query ya cambió).
+        if (offReqId.current === reqId) setOffResults(results);
+      } catch {
+        if (offReqId.current === reqId) setOffResults([]);
+      } finally {
+        if (offReqId.current === reqId) setOffLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(start);
+      clearTimeout(handle);
+    };
+  }, [q]);
+
   function addFood(f: FoodOption) {
     setLines((ls) => [...ls, { foodItemId: f.id, name: f.name, quantity: 100, unit: 'g' }]);
     setQ('');
+    setOffResults([]);
   }
 
   function handleCreated(food: NewFood) {
     setFoods((fs) => (fs.some((f) => f.id === food.id) ? fs : [food, ...fs]));
     addFood(food);
+  }
+
+  // Importa un producto OFF como food_item y lo agrega como línea.
+  function pickOffProduct(product: OffProduct) {
+    if (importingCode) return;
+    setError(null);
+    setImportingCode(product.code);
+    startTransition(async () => {
+      const res = await importOpenFoodFactsItem(product);
+      setImportingCode(null);
+      if (res.error || !res.food) {
+        setError(res.error ?? 'No se pudo importar el alimento.');
+        return;
+      }
+      handleCreated(res.food);
+    });
   }
 
   function submit() {
@@ -171,30 +239,72 @@ export function FoodLogForm({
         </Select>
       </FormField>
 
-      <FormField label="Buscar alimento">
+      <FormField label="Buscar alimento" hint="Busca en tus alimentos y en la base mundial (Open Food Facts).">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Ej: pollo, arroz, yogur…"
+            placeholder="Ej: pollo, arroz, arándanos…"
             className="pl-9"
           />
-          {matches.length > 0 && (
-            <ul className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-elevated py-1 shadow-xl">
-              {matches.map((f) => (
-                <li key={f.id}>
-                  <button
-                    type="button"
-                    onClick={() => addFood(f)}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface"
-                  >
-                    <span className="text-foreground">{f.name}</span>
-                    <span className="text-xs text-faint">{f.calories_per_100g} kcal/100g</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {offLoading && (
+            <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-faint" aria-hidden />
+          )}
+          {(matches.length > 0 || offResults.length > 0 || (q.trim().length >= 3 && offLoading)) && (
+            <div className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-elevated py-1 shadow-xl">
+              {matches.length > 0 && (
+                <ul>
+                  <li className="px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-faint">
+                    Tus alimentos
+                  </li>
+                  {matches.map((f) => (
+                    <li key={f.id}>
+                      <button
+                        type="button"
+                        onClick={() => addFood(f)}
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface"
+                      >
+                        <span className="text-foreground">{f.name}</span>
+                        <span className="tabular text-xs text-faint">{f.calories_per_100g} kcal/100g</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {q.trim().length >= 3 && (matches.length > 0 ? <div className="my-1 border-t border-hairline" /> : null)}
+
+              {q.trim().length >= 3 && (
+                <ul>
+                  <li className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-faint">
+                    <Globe className="size-3" aria-hidden /> Resultados de la base mundial
+                  </li>
+                  {offResults.map((p) => (
+                    <li key={p.code}>
+                      <button
+                        type="button"
+                        onClick={() => pickOffProduct(p)}
+                        disabled={!!importingCode}
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-surface disabled:opacity-60"
+                      >
+                        <span className="min-w-0 truncate text-foreground">{p.name}</span>
+                        <span className="tabular flex shrink-0 items-center gap-1.5 text-xs text-faint">
+                          {p.calories_per_100g} kcal/100g
+                          {importingCode === p.code && <Loader2 className="size-3 animate-spin" aria-hidden />}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                  {offLoading && offResults.length === 0 && (
+                    <li className="px-3 py-2 text-xs text-faint">Buscando en la base mundial…</li>
+                  )}
+                  {!offLoading && offResults.length === 0 && (
+                    <li className="px-3 py-2 text-xs text-faint">Sin coincidencias en la base mundial.</li>
+                  )}
+                </ul>
+              )}
+            </div>
           )}
         </div>
         <div className="mt-2 flex justify-end">
@@ -254,8 +364,10 @@ export function FoodLogForm({
                     </Select>
                   </div>
                   {l.unit !== 'g' && <span className="text-xs text-faint">= {grams} g</span>}
-                  <p className="tabular text-xs text-muted">
-                    {m.calories} kcal · P {m.protein_g} · C {m.carbs_g} · G {m.fat_g}
+                  <p className="text-xs">
+                    <span className="tabular text-muted">{m.calories} kcal</span>
+                    <span className="mx-1.5 text-faint">·</span>
+                    <MacroLine macros={m} className="text-xs" />
                   </p>
                 </div>
               </li>
@@ -269,9 +381,8 @@ export function FoodLogForm({
         <p className="tabular mt-1 font-display text-lg font-bold text-foreground">
           {totals.calories} kcal
         </p>
-        <p className="tabular text-sm text-muted">
-          P {totals.protein_g}g · C {totals.carbs_g}g · G {totals.fat_g}g
-        </p>
+        <MacroLine macros={totals} unit="g" className="text-sm" />
+        <MacroLegend className="mt-3 border-t border-hairline pt-3" />
       </div>
 
       <FormField label="Nota" htmlFor="notes" hint="Opcional">
