@@ -129,24 +129,39 @@ export function AppShell({
   variant,
   user,
   children,
+  demoBanner,
 }: {
   variant: 'coach' | 'student';
   user: AppShellUser;
   children: React.ReactNode;
+  /** Optional demo-mode banner (rendered fixed at top); shifts the shell down. */
+  demoBanner?: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
   const items = variant === 'coach' ? COACH_NAV : STUDENT_NAV;
+  const hasBanner = Boolean(demoBanner);
 
   return (
-    <div className="min-h-screen">
+    <div className={cn('min-h-screen', hasBanner && 'pt-11')}>
       <RouteProgress />
+      {demoBanner}
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-hairline bg-surface lg:block">
+      <aside
+        className={cn(
+          'fixed bottom-0 left-0 z-30 hidden w-64 border-r border-hairline bg-surface lg:block',
+          hasBanner ? 'top-11' : 'top-0',
+        )}
+      >
         <SidebarBody items={items} user={user} />
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-hairline bg-canvas/90 px-4 backdrop-blur lg:hidden">
+      <header
+        className={cn(
+          'sticky z-30 flex h-14 items-center justify-between border-b border-hairline bg-canvas/90 px-4 backdrop-blur lg:hidden',
+          hasBanner ? 'top-11' : 'top-0',
+        )}
+      >
         <Link href="/">
           <Logo />
         </Link>
