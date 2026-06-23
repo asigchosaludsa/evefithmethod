@@ -14,10 +14,17 @@ export default async function CuentasPage() {
   const coach = await requireCoach();
   const admin = createAdminClient();
 
-  const { data: accounts } = await admin
+  const { data: allAccounts } = await admin
     .from('profiles')
-    .select('id, email, full_name, role, status, created_at')
+    .select('id, email, full_name, role, status, created_at, is_demo')
     .order('created_at', { ascending: false });
+
+  // Las sesiones demo efímeras (is_demo) no se listan: son transitorias y se
+  // borran solas. Solo mostramos su conteo. La plantilla (demo.alumna@…) NO es
+  // is_demo, así que sí aparece (marcada como plantilla).
+  const accounts = (allAccounts ?? []).filter((a) => !a.is_demo);
+  const demoSessions = (allAccounts ?? []).filter((a) => a.is_demo).length;
+  const TEMPLATE_EMAIL = 'demo.alumna@evefitmethod.com';
 
   const { data: invites } = await admin
     .from('invitations')
@@ -35,7 +42,12 @@ export default async function CuentasPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Cuentas registradas ({accounts?.length ?? 0})</CardTitle>
+          <CardTitle>Cuentas registradas ({accounts.length})</CardTitle>
+          {demoSessions > 0 && (
+            <p className="mt-1 text-xs text-faint">
+              + {demoSessions} {demoSessions === 1 ? 'sesión demo activa' : 'sesiones demo activas'} (se borran solas)
+            </p>
+          )}
         </CardHeader>
         <CardBody className="p-0">
           {!accounts || accounts.length === 0 ? (
@@ -45,8 +57,9 @@ export default async function CuentasPage() {
           ) : (
             <ul className="divide-y divide-hairline">
               {accounts.map((a) => {
+                const isTemplate = a.email === TEMPLATE_EMAIL;
                 const protectedAcct =
-                  a.id === coach.id || a.role === 'coach' || a.role === 'admin' || isOwnerEmail(a.email);
+                  a.id === coach.id || a.role === 'coach' || a.role === 'admin' || isOwnerEmail(a.email) || isTemplate;
                 return (
                   <li key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
@@ -55,9 +68,13 @@ export default async function CuentasPage() {
                       </p>
                       <p className="truncate text-xs text-muted">{a.email}</p>
                     </div>
-                    <Badge tone={a.role === 'student' ? 'info' : a.role ? 'primary' : 'neutral'}>
-                      {a.role ? (ROLE_LABEL[a.role] ?? a.role) : 'Sin rol'}
-                    </Badge>
+                    {isTemplate ? (
+                      <Badge tone="primary">DEMO · plantilla</Badge>
+                    ) : (
+                      <Badge tone={a.role === 'student' ? 'info' : a.role ? 'primary' : 'neutral'}>
+                        {a.role ? (ROLE_LABEL[a.role] ?? a.role) : 'Sin rol'}
+                      </Badge>
+                    )}
                     <Badge tone={a.status === 'active' ? 'success' : 'neutral'}>{a.status}</Badge>
                     <span className="hidden text-xs text-faint sm:inline">{formatDate(a.created_at)}</span>
                     <div className="ml-auto">

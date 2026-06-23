@@ -2,7 +2,9 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const TEMPLATE_EMAIL = 'demo.alumna@evefitmethod.com';
-const EXPIRY_HOURS = 3;
+const EXPIRY_HOURS = 2;
+/** Tope global de sesiones demo activas (evita que se acumulen miles). */
+const MAX_ACTIVE_DEMOS = 50;
 
 export interface DemoCredentials {
   email: string;
@@ -18,6 +20,17 @@ export async function provisionDemoStudent(): Promise<
   { ok: true; creds: DemoCredentials; userId: string } | { ok: false; error: string }
 > {
   const admin = createAdminClient();
+
+  // 0) Tope global: si hay demasiadas demos activas, limpiar expiradas y, si aún
+  //    se supera el tope, rechazar (evita acumulación masiva por abuso).
+  const countActive = async () =>
+    (await admin.from('profiles').select('id', { count: 'exact', head: true }).eq('is_demo', true)).count ?? 0;
+  if ((await countActive()) >= MAX_ACTIVE_DEMOS) {
+    await cleanupExpiredDemos(MAX_ACTIVE_DEMOS);
+    if ((await countActive()) >= MAX_ACTIVE_DEMOS) {
+      return { ok: false, error: 'La demo está muy concurrida ahora mismo. Intenta en unos minutos.' };
+    }
+  }
 
   // 1) Resolver el id de la plantilla.
   const { data: tpl } = await admin
