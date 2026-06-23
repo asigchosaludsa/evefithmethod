@@ -1,11 +1,15 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { requireCoach, assertCoachOwnsStudent } from '@/lib/auth/roles';
-import { createClient } from '@/lib/supabase/server';
-import { calculateWeeklyWeightTrend } from '@/domain/progress/calculations';
-import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader, StatCard } from '@/components/common';
+import { getStudentProgressDashboard } from '@/lib/db/queries/progress-dashboard';
 import { getProgressPhotos } from '@/lib/db/queries/progress-photos';
-import { formatDate } from '@/lib/utils/date';
+import { goalProgressPct, remainingToGoal } from '@/domain/progress/goals';
+import { Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } from '@/components/common';
+import { GoalProgressRing } from '@/components/progress/GoalProgressRing';
+import { WeightTrendChart } from '@/components/progress/WeightTrendChart';
+import { MeasurementDeltas } from '@/components/progress/MeasurementDeltas';
+import { TrainingSummaryCard } from '@/components/progress/TrainingSummaryCard';
+import { NutritionAdherenceSummary } from '@/components/progress/NutritionAdherenceSummary';
 
 export default async function StudentProgressPage({
   params,
@@ -16,34 +20,83 @@ export default async function StudentProgressPage({
   const coach = await requireCoach();
   await assertCoachOwnsStudent(coach.id, studentId);
 
-  const supabase = await createClient();
-  const [{ data: weights }, { data: measurements }] = await Promise.all([
-    supabase.from('weight_entries').select('*').eq('student_id', studentId).order('recorded_at', { ascending: false }).limit(20),
-    supabase.from('body_measurements').select('*').eq('student_id', studentId).order('recorded_at', { ascending: false }).limit(10),
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [dash, photos] = await Promise.all([
+    getStudentProgressDashboard(studentId, todayISO),
+    getProgressPhotos(studentId),
   ]);
 
-  const trend = calculateWeeklyWeightTrend(
-    (weights ?? []).map((w) => ({ weight_kg: w.weight_kg, recorded_at: w.recorded_at })),
-  );
-  const latest = weights?.[0];
-  const photos = await getProgressPhotos(studentId);
+  const pct = goalProgressPct(dash.weight.firstKg, dash.weight.currentKg, dash.weight.goalKg);
+  const remaining = remainingToGoal(dash.weight.currentKg, dash.weight.goalKg);
 
   return (
     <div className="space-y-6">
       <Link href={`/coach/students/${studentId}`} className="inline-flex items-center gap-1 text-sm text-muted hover:text-foreground">
         <ArrowLeft className="size-4" /> Volver a la alumna
       </Link>
-      <PageHeader title="Progreso" description="Evolución de peso y medidas." />
+      <PageHeader title="Progreso" description="Evolución de peso, medidas, entrenamiento y nutrición." />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="Peso actual" value={latest ? `${latest.weight_kg} kg` : '—'} />
-        <StatCard
-          label="Tendencia"
-          value={trend.change === 0 ? '—' : `${trend.change > 0 ? '+' : ''}${trend.change} kg`}
-          tone={trend.direction === 'down' ? 'success' : 'default'}
-        />
-        <StatCard label="Registros" value={weights?.length ?? 0} />
+      {/* Hero: meta + entrenamiento + nutrición */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Meta de peso</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <GoalProgressRing
+              pct={pct}
+              currentKg={dash.weight.currentKg}
+              goalKg={dash.weight.goalKg}
+              remainingKg={remaining}
+            />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Entrenamiento</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <TrainingSummaryCard
+              sessionsLast30={dash.training.sessionsLast30}
+              streak={dash.training.streak}
+              topProgressions={dash.training.topProgressions}
+            />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Nutrición</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <NutritionAdherenceSummary
+              pctDaysOk={dash.nutrition.pctDaysOk}
+              daysLogged={dash.nutrition.daysLogged}
+              points={dash.nutrition.points}
+              targetCalories={dash.nutrition.targetCalories}
+            />
+          </CardBody>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Evolución de peso</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <WeightTrendChart series={dash.weight.series} goalKg={dash.weight.goalKg} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Medidas</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <MeasurementDeltas first={dash.measurements.first} last={dash.measurements.last} />
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -68,52 +121,6 @@ export default async function StudentProgressPage({
           )}
         </CardBody>
       </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Historial de peso</CardTitle>
-          </CardHeader>
-          <CardBody>
-            {!weights || weights.length === 0 ? (
-              <EmptyState title="Sin registros de peso" />
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {weights.map((w) => (
-                  <li key={w.id} className="flex items-center justify-between py-2 text-sm">
-                    <span className="text-foreground">{w.weight_kg} kg</span>
-                    <span className="text-muted">{formatDate(w.recorded_at)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Medidas</CardTitle>
-          </CardHeader>
-          <CardBody>
-            {!measurements || measurements.length === 0 ? (
-              <EmptyState title="Sin medidas" />
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {measurements.map((m) => (
-                  <li key={m.id} className="py-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted">{formatDate(m.recorded_at)}</span>
-                      <Badge tone="neutral">
-                        {[m.waist_cm && `C ${m.waist_cm}`, m.hip_cm && `Cad ${m.hip_cm}`].filter(Boolean).join(' · ') || '—'}
-                      </Badge>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
-      </div>
     </div>
   );
 }
