@@ -6,6 +6,7 @@ import { requireStudent } from '@/lib/auth/roles';
 import { getStudentCoachId } from '@/lib/db/queries/student';
 import { calculateFoodMacros } from '@/domain/nutrition/calculations';
 import { foodLogSchema } from '@/domain/nutrition/schemas';
+import { toGrams } from '@/domain/nutrition/units';
 import { workoutLogSchema } from '@/domain/workouts/schemas';
 import { weightEntrySchema, bodyMeasurementSchema } from '@/domain/progress/schemas';
 import { upsertWorkoutSession } from '@/lib/workouts/log-session';
@@ -20,17 +21,36 @@ export interface LogFoodInput {
   mealType: MealType;
   notes?: string;
   photoPath?: string | null;
-  items: { foodItemId: string; grams: number }[];
+  items: { foodItemId: string; unit: 'g' | 'ml' | 'unit'; quantity: number }[];
 }
 
 export async function logFood(input: LogFoodInput): Promise<{ error?: string; success?: boolean }> {
   const student = await requireStudent();
   if (!input.items || input.items.length === 0) return { error: 'Agrega al menos un alimento.' };
 
+  const supabasePre = await createClient();
+  const ids0 = input.items.map((i) => i.foodItemId);
+  const { data: foods0 } = await supabasePre
+    .from('food_items')
+    .select('id, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, grams_per_unit')
+    .in('id', ids0);
+  const foodMap = new Map((foods0 ?? []).map((f) => [f.id, f]));
+
+  const itemsWithGrams = input.items.map((i) => {
+    const food = foodMap.get(i.foodItemId);
+    const gramsPerUnit = food?.grams_per_unit ?? null;
+    return { ...i, grams: toGrams(i.quantity, i.unit, gramsPerUnit) };
+  });
+
   const parsed = foodLogSchema.safeParse({
     meal_type: input.mealType,
     notes: input.notes || undefined,
-    items: input.items.map((i) => ({ food_item_id: i.foodItemId, grams: i.grams })),
+    items: itemsWithGrams.map((i) => ({
+      food_item_id: i.foodItemId,
+      unit: i.unit,
+      quantity: i.quantity,
+      grams: i.grams,
+    })),
   });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
 
@@ -39,13 +59,6 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
   }
 
   const supabase = await createClient();
-  const ids = input.items.map((i) => i.foodItemId);
-  const { data: foods } = await supabase
-    .from('food_items')
-    .select('id, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g')
-    .in('id', ids);
-  const foodMap = new Map((foods ?? []).map((f) => [f.id, f]));
-
   const coachId = await getStudentCoachId(student.id);
   const { data: log, error: logErr } = await supabase
     .from('food_logs')
@@ -61,7 +74,7 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
     .single();
   if (logErr || !log) return { error: logErr?.message ?? 'No se pudo guardar el registro.' };
 
-  const rows = input.items.flatMap((item) => {
+  const rows = itemsWithGrams.flatMap((item) => {
     const food = foodMap.get(item.foodItemId);
     if (!food) return [];
     const macros = calculateFoodMacros(food, item.grams);
@@ -69,6 +82,8 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
       {
         food_log_id: log.id,
         food_item_id: item.foodItemId,
+        unit: item.unit,
+        quantity: item.quantity,
         grams: item.grams,
         calories: macros.calories,
         protein_g: macros.protein_g,

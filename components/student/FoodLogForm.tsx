@@ -115,7 +115,7 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
         mealType,
         notes: notes || undefined,
         photoPath,
-        items: lines.map((l) => ({ foodItemId: l.foodItemId, grams: l.grams })),
+        items: lines.map((l) => ({ foodItemId: l.foodItemId, unit: 'g' as const, quantity: l.grams })),
       });
       if (res.error) {
         setError(res.error);

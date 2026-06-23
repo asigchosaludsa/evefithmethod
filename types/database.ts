@@ -225,6 +225,8 @@ type FoodItemsRow = {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
+  grams_per_unit: number | null;
+  unit_label: string | null;
   source: string;
   created_by: string | null;
   is_public: boolean;
@@ -240,6 +242,8 @@ type FoodItemsInsert = {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
+  grams_per_unit?: number | null;
+  unit_label?: string | null;
   source?: string;
   created_by?: string | null;
   is_public?: boolean;
@@ -280,6 +284,8 @@ type FoodLogItemsRow = {
   id: string;
   food_log_id: string;
   food_item_id: string | null;
+  unit: string | null;
+  quantity: number | null;
   grams: number;
   calories: number;
   protein_g: number;
@@ -291,6 +297,8 @@ type FoodLogItemsInsert = {
   id?: string;
   food_log_id: string;
   food_item_id?: string | null;
+  unit?: string | null;
+  quantity?: number | null;
   grams: number;
   calories: number;
   protein_g: number;
