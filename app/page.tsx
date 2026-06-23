@@ -109,7 +109,7 @@ export default function LandingPage() {
               Crea tu cuenta o acepta la invitación de tu coach y empieza con acompañamiento real.
             </p>
             <div className="relative mt-7 flex justify-center">
-              <Button asChild size="lg">
+              <Button asChild size="lg" className="btn-sheen btn-cta-glow">
                 <Link href="/solicitud">
                   Empieza ya <ArrowRight className="size-4" />
                 </Link>

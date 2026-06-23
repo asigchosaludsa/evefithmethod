@@ -324,3 +324,83 @@ h4,
   .efm-bar { animation: none; transform: none; }
   .efm-line { animation: none; stroke-dashoffset: 0; }
 }
+
+/* ===========================================================================
+   Button micro-interactions (landing CTAs). transform/opacity/box-shadow only;
+   all motion gated behind no-preference. The global reduce block above also
+   neutralizes any animation, so reduced-motion users get clean static buttons.
+   `:active` scale lives on the Button component itself.
+   =========================================================================== */
+
+/* Sheen: a soft light gradient that sweeps across once on hover. The sweep is a
+   pseudo-element clipped by the button's rounded box; it only moves under
+   no-preference, so reduced-motion users just get the (static) button. */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in oklab, white 28%, transparent) 50%,
+    transparent 80%
+  );
+  transform: translateX(-130%);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @media (hover: hover) and (pointer: fine) {
+    .btn-sheen:hover::after {
+      animation: btn-sheen-sweep 0.7s var(--ease-out) 1;
+    }
+  }
+}
+@keyframes btn-sheen-sweep {
+  0% {
+    transform: translateX(-130%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(130%);
+    opacity: 0;
+  }
+}
+
+/* Scarlet-tinted lift shadow for primary CTAs on hover. Complements the
+   Button component's own box-shadow transition (transition list already
+   includes box-shadow). */
+@media (hover: hover) and (pointer: fine) {
+  .btn-cta-glow:hover {
+    box-shadow:
+      0 10px 30px -8px color-mix(in oklab, var(--color-primary) 60%, transparent),
+      0 0 0 1px color-mix(in oklab, var(--color-primary) 35%, transparent);
+  }
+}
+
+/* Subtle scarlet pulse to draw the eye to the demo CTA. One soft halo that
+   breathes; never bounces. Disabled under reduced motion (and while the button
+   is busy — handled in the component by dropping the class). */
+@media (prefers-reduced-motion: no-preference) {
+  .btn-demo-pulse {
+    animation: btn-demo-pulse 2.8s var(--ease-in-out) infinite;
+  }
+}
+@keyframes btn-demo-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-primary) 0%, transparent);
+  }
+}
