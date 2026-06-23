@@ -8,6 +8,7 @@ import { calculateFoodMacros } from '@/domain/nutrition/calculations';
 import { foodLogSchema } from '@/domain/nutrition/schemas';
 import { workoutLogSchema } from '@/domain/workouts/schemas';
 import { weightEntrySchema, bodyMeasurementSchema } from '@/domain/progress/schemas';
+import { upsertWorkoutSession } from '@/lib/workouts/log-session';
 import type { ActionState } from '@/lib/auth/action-state';
 import type { MealType } from '@/types/app';
 
@@ -111,32 +112,26 @@ export async function logWorkout(input: LogWorkoutInput): Promise<{ error?: stri
 
   const supabase = await createClient();
   const coachId = await getStudentCoachId(student.id);
+  const todayISO = new Date().toISOString().slice(0, 10);
 
-  const { data: log, error: logErr } = await supabase
-    .from('workout_logs')
-    .insert({
-      student_id: student.id,
-      coach_id: coachId,
-      workout_plan_id: input.workoutPlanId ?? null,
-      workout_plan_day_id: input.workoutPlanDayId ?? null,
-      status: 'completed',
-      logged_at: new Date().toISOString(),
-      perceived_effort: input.perceivedEffort ?? null,
-      notes: input.notes ?? null,
-    })
-    .select('id')
-    .single();
-  if (logErr || !log) return { error: logErr?.message ?? 'No se pudo guardar el entrenamiento.' };
-
-  const rows = (input.sets ?? []).map((s) => ({
-    workout_log_id: log.id,
-    exercise_id: s.exerciseId ?? null,
-    set_number: s.setNumber,
-    reps_completed: s.reps ?? null,
-    weight_kg: s.weight ?? null,
-    completed: s.completed,
-  }));
-  if (rows.length > 0) await supabase.from('workout_log_sets').insert(rows);
+  const { error } = await upsertWorkoutSession(supabase, {
+    studentId: student.id,
+    coachId,
+    planId: input.workoutPlanId ?? null,
+    planDayId: input.workoutPlanDayId ?? null,
+    sessionDateISO: todayISO,
+    status: 'completed',
+    perceivedEffort: input.perceivedEffort ?? null,
+    notes: input.notes ?? null,
+    sets: (input.sets ?? []).map((s) => ({
+      exerciseId: s.exerciseId ?? null,
+      setNumber: s.setNumber,
+      reps: s.reps ?? null,
+      weight: s.weight ?? null,
+      completed: s.completed,
+    })),
+  });
+  if (error) return { error };
 
   revalidatePath('/student/workout');
   revalidatePath('/student/today');
