@@ -18,7 +18,7 @@ export function ExerciseProgressChart({ series }: { series: MaxWeightPoint[] }) 
 
   const first = points[0]?.maxKg ?? 0;
   const last = points[points.length - 1]?.maxKg ?? 0;
-  const delta = last - first;
+  const delta = Math.round((last - first) * 100) / 100;
 
   return (
     <div className="space-y-1.5">
