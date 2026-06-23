@@ -6,9 +6,12 @@ import { Badge, Card, CardBody, CardHeader, CardTitle, EmptyState, PageHeader } 
 import { NutritionPlanForm } from '@/components/coach/NutritionPlanForm';
 import { FoodLogReviewList } from '@/components/coach/FoodLogReviewList';
 import { ArchivePlanButton } from '@/components/coach/ArchivePlanButton';
-import { getStudentNutritionDay } from '@/lib/db/queries/student-nutrition';
+import { getStudentNutritionDay, getStudentNutritionRange } from '@/lib/db/queries/student-nutrition';
 import { calculateMacroProgress } from '@/domain/nutrition/calculations';
 import { formatDate, todayISO } from '@/lib/utils/date';
+import { NutritionCalendar } from '@/components/nutrition/NutritionCalendar';
+import { NutritionAdherenceChart, type AdherencePoint } from '@/components/nutrition/NutritionAdherenceChart';
+import { addDaysISO } from '@/domain/workouts/calendar';
 
 export default async function StudentNutritionPage({
   params,
@@ -27,6 +30,14 @@ export default async function StudentNutritionPage({
   const calProgress = calculateMacroProgress(day.consumed.calories, day.target.calories ?? 0);
   const activePlans = (plans ?? []).filter((p) => p.status !== 'archived');
   const archivedPlans = (plans ?? []).filter((p) => p.status === 'archived');
+
+  const endISO = todayISO();
+  const startISO = addDaysISO(endISO, -27);
+  const range = await getStudentNutritionRange(studentId, startISO, endISO);
+  const points: AdherencePoint[] = [];
+  for (let d = startISO; d <= endISO; d = addDaysISO(d, 1)) {
+    points.push({ dateISO: d, calories: range.byDate[d]?.consumed.calories ?? 0 });
+  }
 
   return (
     <div className="space-y-6">
@@ -52,6 +63,20 @@ export default async function StudentNutritionPage({
             </p>
           </div>
           <FoodLogReviewList meals={day.meals} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Calendario de adherencia</CardTitle>
+        </CardHeader>
+        <CardBody className="space-y-5">
+          <NutritionCalendar
+            byDate={range.byDate}
+            target={{ calories: range.target.calories }}
+            todayISO={endISO}
+          />
+          <NutritionAdherenceChart points={points} target={range.target.calories} />
         </CardBody>
       </Card>
 
