@@ -24,17 +24,40 @@ export interface LogFoodInput {
   items: { foodItemId: string; unit: 'g' | 'ml' | 'unit'; quantity: number }[];
 }
 
-export async function logFood(input: LogFoodInput): Promise<{ error?: string; success?: boolean }> {
-  const student = await requireStudent();
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Valida los items de una comida, resuelve gramos vía `toGrams` y calcula macros
+ * por item. Devuelve las filas listas para insertar en `food_log_items` (sin
+ * `food_log_id`, que se asigna al insertar). Lógica compartida entre logFood y
+ * updateFoodLog para mantener una sola fuente de verdad de la conversión.
+ */
+async function buildFoodLogItemRows(
+  supabase: SupabaseServerClient,
+  input: { mealType: MealType; notes?: string; items: LogFoodInput['items'] },
+): Promise<
+  | { error: string }
+  | {
+      rows: {
+        food_item_id: string;
+        unit: 'g' | 'ml' | 'unit';
+        quantity: number;
+        grams: number;
+        calories: number;
+        protein_g: number;
+        carbs_g: number;
+        fat_g: number;
+      }[];
+    }
+> {
   if (!input.items || input.items.length === 0) return { error: 'Agrega al menos un alimento.' };
 
-  const supabasePre = await createClient();
-  const ids0 = input.items.map((i) => i.foodItemId);
-  const { data: foods0 } = await supabasePre
+  const ids = input.items.map((i) => i.foodItemId);
+  const { data: foods } = await supabase
     .from('food_items')
     .select('id, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, grams_per_unit')
-    .in('id', ids0);
-  const foodMap = new Map((foods0 ?? []).map((f) => [f.id, f]));
+    .in('id', ids);
+  const foodMap = new Map((foods ?? []).map((f) => [f.id, f]));
 
   const itemsWithGrams = input.items.map((i) => {
     const food = foodMap.get(i.foodItemId);
@@ -54,11 +77,41 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
   });
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
 
+  const rows = itemsWithGrams.flatMap((item) => {
+    const food = foodMap.get(item.foodItemId);
+    if (!food) return [];
+    const macros = calculateFoodMacros(food, item.grams);
+    return [
+      {
+        food_item_id: item.foodItemId,
+        unit: item.unit,
+        quantity: item.quantity,
+        grams: item.grams,
+        calories: macros.calories,
+        protein_g: macros.protein_g,
+        carbs_g: macros.carbs_g,
+        fat_g: macros.fat_g,
+      },
+    ];
+  });
+  return { rows };
+}
+
+export async function logFood(input: LogFoodInput): Promise<{ error?: string; success?: boolean }> {
+  const student = await requireStudent();
+
   if (input.photoPath && !input.photoPath.startsWith(`${student.id}/`)) {
     return { error: 'Ruta de foto inválida.' };
   }
 
   const supabase = await createClient();
+  const built = await buildFoodLogItemRows(supabase, {
+    mealType: input.mealType,
+    notes: input.notes,
+    items: input.items,
+  });
+  if ('error' in built) return { error: built.error };
+
   const coachId = await getStudentCoachId(student.id);
   const { data: log, error: logErr } = await supabase
     .from('food_logs')
@@ -74,29 +127,91 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
     .single();
   if (logErr || !log) return { error: logErr?.message ?? 'No se pudo guardar el registro.' };
 
-  const rows = itemsWithGrams.flatMap((item) => {
-    const food = foodMap.get(item.foodItemId);
-    if (!food) return [];
-    const macros = calculateFoodMacros(food, item.grams);
-    return [
-      {
-        food_log_id: log.id,
-        food_item_id: item.foodItemId,
-        unit: item.unit,
-        quantity: item.quantity,
-        grams: item.grams,
-        calories: macros.calories,
-        protein_g: macros.protein_g,
-        carbs_g: macros.carbs_g,
-        fat_g: macros.fat_g,
-      },
-    ];
-  });
-  if (rows.length > 0) await supabase.from('food_log_items').insert(rows);
+  if (built.rows.length > 0) {
+    await supabase
+      .from('food_log_items')
+      .insert(built.rows.map((r) => ({ ...r, food_log_id: log.id })));
+  }
 
   revalidatePath('/student/today');
   revalidatePath('/student/meals');
   return { success: true };
+}
+
+export interface UpdateFoodLogInput {
+  mealType: MealType;
+  notes?: string;
+  items: { foodItemId: string; unit: 'g' | 'ml' | 'unit'; quantity: number }[];
+}
+
+/** Edita una comida ya registrada: actualiza tipo/nota y reemplaza sus items. */
+export async function updateFoodLog(
+  logId: string,
+  input: UpdateFoodLogInput,
+): Promise<{ error?: string; success?: boolean }> {
+  const student = await requireStudent();
+  const supabase = await createClient();
+
+  // Verifica propiedad (RLS ya restringe, pero filtramos explícitamente).
+  const { data: existing } = await supabase
+    .from('food_logs')
+    .select('id')
+    .eq('id', logId)
+    .eq('student_id', student.id)
+    .maybeSingle();
+  if (!existing) return { error: 'No se encontró el registro.' };
+
+  const built = await buildFoodLogItemRows(supabase, {
+    mealType: input.mealType,
+    notes: input.notes,
+    items: input.items,
+  });
+  if ('error' in built) return { error: built.error };
+
+  const { error: updErr } = await supabase
+    .from('food_logs')
+    .update({ meal_type: input.mealType, notes: input.notes ?? null })
+    .eq('id', logId)
+    .eq('student_id', student.id);
+  if (updErr) return { error: updErr.message };
+
+  // Reemplaza los items: borra los viejos e inserta los nuevos.
+  const { error: delErr } = await supabase.from('food_log_items').delete().eq('food_log_id', logId);
+  if (delErr) return { error: delErr.message };
+
+  if (built.rows.length > 0) {
+    const { error: insErr } = await supabase
+      .from('food_log_items')
+      .insert(built.rows.map((r) => ({ ...r, food_log_id: logId })));
+    if (insErr) return { error: insErr.message };
+  }
+
+  revalidatePath('/student/today');
+  revalidatePath('/student/meals');
+  return { success: true };
+}
+
+/** Elimina una comida registrada (sus items caen por FK on delete cascade). */
+export async function deleteFoodLog(logId: string): Promise<{ ok?: true; error?: string }> {
+  const student = await requireStudent();
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from('food_logs')
+    .select('id')
+    .eq('id', logId)
+    .eq('student_id', student.id)
+    .maybeSingle();
+  if (!existing) return { error: 'No se encontró el registro.' };
+
+  // Borra items primero por si el FK no estuviera en cascade.
+  await supabase.from('food_log_items').delete().eq('food_log_id', logId);
+  const { error } = await supabase.from('food_logs').delete().eq('id', logId).eq('student_id', student.id);
+  if (error) return { error: error.message };
+
+  revalidatePath('/student/today');
+  revalidatePath('/student/meals');
+  return { ok: true };
 }
 
 export interface LogWorkoutInput {
