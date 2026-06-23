@@ -7,6 +7,7 @@ import { logFood } from '@/lib/student/actions';
 import { createClient } from '@/lib/supabase/client';
 import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/calculations';
+import { toGrams, availableUnits, type FoodUnit } from '@/domain/nutrition/units';
 import { Button, FormField, Input, Select, Textarea } from '@/components/common';
 import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
 import type { NewFood } from '@/lib/student/food-actions';
@@ -19,12 +20,20 @@ export interface FoodOption {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
+  grams_per_unit: number | null;
+  unit_label: string | null;
 }
 
 interface Line {
   foodItemId: string;
   name: string;
-  grams: number;
+  quantity: number;
+  unit: FoodUnit;
+}
+
+function unitLabelFor(unit: FoodUnit, food: FoodOption | undefined): string {
+  if (unit === 'unit') return food?.unit_label ?? 'unidad';
+  return unit;
 }
 
 const MEAL_OPTIONS: { value: MealType; label: string }[] = [
@@ -88,14 +97,16 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
       calculateMealTotals(
         lines.map((l) => {
           const f = foodMap.get(l.foodItemId);
-          return f ? calculateFoodMacros(f, l.grams) : { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+          if (!f) return { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+          const grams = toGrams(l.quantity, l.unit, f.grams_per_unit);
+          return calculateFoodMacros(f, grams);
         }),
       ),
     [lines, foodMap],
   );
 
   function addFood(f: FoodOption) {
-    setLines((ls) => [...ls, { foodItemId: f.id, name: f.name, grams: 100 }]);
+    setLines((ls) => [...ls, { foodItemId: f.id, name: f.name, quantity: 100, unit: 'g' }]);
     setQ('');
   }
 
@@ -115,7 +126,7 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
         mealType,
         notes: notes || undefined,
         photoPath,
-        items: lines.map((l) => ({ foodItemId: l.foodItemId, unit: 'g' as const, quantity: l.grams })),
+        items: lines.map((l) => ({ foodItemId: l.foodItemId, unit: l.unit, quantity: l.quantity })),
       });
       if (res.error) {
         setError(res.error);
@@ -172,7 +183,9 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
         <ul className="space-y-2">
           {lines.map((l, i) => {
             const f = foodMap.get(l.foodItemId);
-            const m = f ? calculateFoodMacros(f, l.grams) : { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+            const grams = f ? toGrams(l.quantity, l.unit, f.grams_per_unit) : 0;
+            const m = f ? calculateFoodMacros(f, grams) : { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+            const units = f ? availableUnits(f) : (['g', 'ml'] as FoodUnit[]);
             return (
               <li key={`${l.foodItemId}-${i}`} className="rounded-md border border-hairline bg-canvas/40 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -186,22 +199,38 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
                     <Trash2 className="size-4" />
                   </button>
                 </div>
-                <div className="mt-2 flex items-center gap-3">
+                <div className="mt-2 flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-1">
                     <Input
                       type="number"
                       inputMode="decimal"
-                      value={l.grams}
-                      min={1}
+                      value={l.quantity}
+                      min={0}
+                      step="any"
                       onChange={(e) =>
                         setLines((ls) =>
-                          ls.map((x, idx) => (idx === i ? { ...x, grams: Number(e.target.value) || 0 } : x)),
+                          ls.map((x, idx) => (idx === i ? { ...x, quantity: Number(e.target.value) || 0 } : x)),
                         )
                       }
                       className="h-8 w-20"
                     />
-                    <span className="text-xs text-faint">g</span>
+                    <Select
+                      value={l.unit}
+                      onChange={(e) =>
+                        setLines((ls) =>
+                          ls.map((x, idx) => (idx === i ? { ...x, unit: e.target.value as FoodUnit } : x)),
+                        )
+                      }
+                      className="h-8 w-28"
+                    >
+                      {units.map((u) => (
+                        <option key={u} value={u}>
+                          {unitLabelFor(u, f)}
+                        </option>
+                      ))}
+                    </Select>
                   </div>
+                  {l.unit !== 'g' && <span className="text-xs text-faint">= {grams} g</span>}
                   <p className="tabular text-xs text-muted">
                     {m.calories} kcal · P {m.protein_g} · C {m.carbs_g} · G {m.fat_g}
                   </p>
