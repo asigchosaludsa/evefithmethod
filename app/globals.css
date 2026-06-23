@@ -244,3 +244,14 @@ h4,
     scroll-behavior: auto !important;
   }
 }
+
+@keyframes efm-ring-fill {
+  from { stroke-dashoffset: var(--efm-circ); }
+  to { stroke-dashoffset: 0; }
+}
+.efm-ring {
+  animation: efm-ring-fill 1s ease-out 0.15s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .efm-ring { animation: none; stroke-dashoffset: 0; }
+}
