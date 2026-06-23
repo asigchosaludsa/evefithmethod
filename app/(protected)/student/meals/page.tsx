@@ -1,91 +1,95 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { requireStudent } from '@/lib/auth/roles';
-import { createClient } from '@/lib/supabase/server';
-import { calculateMealTotals } from '@/domain/nutrition/calculations';
-import { Badge, Button, EmptyState, PageHeader } from '@/components/common';
-import { formatDateTime } from '@/lib/utils/date';
+import {
+  getStudentMealsForDay,
+  getStudentNutritionRange,
+} from '@/lib/db/queries/student-nutrition';
+import { Button, Card, CardBody, CardHeader, CardTitle, PageHeader } from '@/components/common';
+import { MealsCalendar } from '@/components/student/MealsCalendar';
+import { MealDayDetail } from '@/components/student/MealDayDetail';
+import { addDaysISO } from '@/domain/workouts/calendar';
+import { todayISO as getTodayISO } from '@/lib/utils/date';
 
 export const metadata = { title: 'Mis comidas' };
 
-const MEAL_LABELS: Record<string, string> = {
-  breakfast: 'Desayuno',
-  lunch: 'Almuerzo',
-  dinner: 'Cena',
-  snack: 'Snack',
-  other: 'Otro',
-};
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export default async function StudentMealsPage() {
+const MONTHS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+function formatHumanDay(dateISO: string): string {
+  const parts = dateISO.split('-').map(Number);
+  const day = parts[2] ?? 1;
+  const monthName = MONTHS[(parts[1] ?? 1) - 1] ?? '';
+  return `${day} de ${monthName}`;
+}
+
+export default async function StudentMealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
   const profile = await requireStudent();
-  const supabase = await createClient();
-  const { data: logs } = await supabase
-    .from('food_logs')
-    .select('*')
-    .eq('student_id', profile.id)
-    .order('logged_at', { ascending: false })
-    .limit(20);
+  const { date } = await searchParams;
 
-  const ids = (logs ?? []).map((l) => l.id);
-  const { data: items } = ids.length
-    ? await supabase.from('food_log_items').select('food_log_id, calories, protein_g, carbs_g, fat_g').in('food_log_id', ids)
-    : { data: [] };
+  const todayISO = getTodayISO();
+  const selectedISO = date && ISO_DATE.test(date) ? date : todayISO;
 
-  const byLog = new Map<string, { calories: number; protein_g: number; carbs_g: number; fat_g: number }[]>();
-  for (const it of items ?? []) {
-    const arr = byLog.get(it.food_log_id) ?? [];
-    arr.push(it);
-    byLog.set(it.food_log_id, arr);
-  }
+  // Rango del calendario: ~5 semanas atrás hasta hoy (cubre semana/mes).
+  const rangeStartISO = addDaysISO(todayISO, -34);
+  const rangeEndISO = todayISO >= selectedISO ? todayISO : selectedISO;
+
+  const [range, day] = await Promise.all([
+    getStudentNutritionRange(profile.id, rangeStartISO, rangeEndISO),
+    getStudentMealsForDay(profile.id, selectedISO),
+  ]);
+
+  const isToday = selectedISO === todayISO;
+  const dayLabel = isToday ? 'Hoy' : formatHumanDay(selectedISO);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Mis comidas"
-        description="Tus registros recientes."
+        description="Revisa cualquier día y gestiona tus registros."
         actions={
           <Button asChild>
             <Link href="/student/meals/new">
-              <Plus className="size-4" /> Registrar
+              <Plus className="size-4" /> Registrar comida
             </Link>
           </Button>
         }
       />
-      {!logs || logs.length === 0 ? (
-        <EmptyState
-          title="Sin registros aún"
-          description="Registra tu primera comida."
-          action={
-            <Button asChild>
-              <Link href="/student/meals/new">
-                <Plus className="size-4" /> Registrar comida
-              </Link>
-            </Button>
-          }
-        />
-      ) : (
-        <ul className="space-y-2">
-          {logs.map((log) => {
-            const totals = calculateMealTotals(byLog.get(log.id) ?? []);
-            return (
-              <li key={log.id} className="rounded-lg border border-border bg-surface p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-foreground">{MEAL_LABELS[log.meal_type] ?? log.meal_type}</span>
-                  <span className="text-xs text-faint">{formatDateTime(log.logged_at)}</span>
-                </div>
-                <p className="tabular mt-1 text-sm text-muted">
-                  {totals.calories} kcal · P {totals.protein_g} · C {totals.carbs_g} · G {totals.fat_g}
-                </p>
-                {log.coach_review_status !== 'pending' && (
-                  <Badge tone={log.coach_review_status === 'flagged' ? 'danger' : 'success'} className="mt-2">
-                    {log.coach_review_status === 'flagged' ? 'Requiere ajuste' : 'Revisado'}
-                  </Badge>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Calendario</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <MealsCalendar byDate={range.byDate} selectedISO={selectedISO} todayISO={todayISO} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{dayLabel}</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <MealDayDetail day={day} />
+          {isToday && (
+            <div className="mt-4">
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/student/meals/new">
+                  <Plus className="size-4" /> Registrar otra comida
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }
