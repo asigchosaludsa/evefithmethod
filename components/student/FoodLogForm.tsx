@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera, Check, Search, Trash2 } from 'lucide-react';
-import { logFood } from '@/lib/student/actions';
+import { logFood, updateFoodLog } from '@/lib/student/actions';
 import { createClient } from '@/lib/supabase/client';
 import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/calculations';
@@ -44,11 +44,36 @@ const MEAL_OPTIONS: { value: MealType; label: string }[] = [
   { value: 'other', label: 'Otro' },
 ];
 
-export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; userId: string }) {
+export interface InitialLine {
+  foodItemId: string;
+  name: string;
+  unit: FoodUnit;
+  quantity: number;
+}
+
+export function FoodLogForm({
+  foodItems,
+  userId,
+  editLogId,
+  initialMealType,
+  initialNotes,
+  initialLines,
+}: {
+  foodItems: FoodOption[];
+  userId: string;
+  /** Si está presente, el formulario edita ese registro en vez de crear uno nuevo. */
+  editLogId?: string;
+  initialMealType?: MealType;
+  initialNotes?: string;
+  initialLines?: InitialLine[];
+}) {
   const router = useRouter();
-  const [mealType, setMealType] = useState<MealType>('breakfast');
-  const [notes, setNotes] = useState('');
-  const [lines, setLines] = useState<Line[]>([]);
+  const isEdit = !!editLogId;
+  const [mealType, setMealType] = useState<MealType>(initialMealType ?? 'breakfast');
+  const [notes, setNotes] = useState(initialNotes ?? '');
+  const [lines, setLines] = useState<Line[]>(
+    initialLines?.map((l) => ({ foodItemId: l.foodItemId, name: l.name, quantity: l.quantity, unit: l.unit })) ?? [],
+  );
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -122,17 +147,15 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
       return;
     }
     startTransition(async () => {
-      const res = await logFood({
-        mealType,
-        notes: notes || undefined,
-        photoPath,
-        items: lines.map((l) => ({ foodItemId: l.foodItemId, unit: l.unit, quantity: l.quantity })),
-      });
+      const items = lines.map((l) => ({ foodItemId: l.foodItemId, unit: l.unit, quantity: l.quantity }));
+      const res = isEdit
+        ? await updateFoodLog(editLogId, { mealType, notes: notes || undefined, items })
+        : await logFood({ mealType, notes: notes || undefined, photoPath, items });
       if (res.error) {
         setError(res.error);
         return;
       }
-      router.push('/student/today');
+      router.push(isEdit ? '/student/meals' : '/student/today');
     });
   }
 
@@ -255,26 +278,28 @@ export function FoodLogForm({ foodItems, userId }: { foodItems: FoodOption[]; us
         <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
       </FormField>
 
-      <FormField label="Foto (opcional)">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-foreground">
-          <input type="file" accept="image/*" onChange={onPhoto} className="hidden" />
-          {photoBusy ? (
-            'Subiendo…'
-          ) : photoPath ? (
-            <>
-              <Check className="size-4 text-success" /> Foto adjunta
-            </>
-          ) : (
-            <>
-              <Camera className="size-4" /> Adjuntar foto
-            </>
-          )}
-        </label>
-      </FormField>
+      {!isEdit && (
+        <FormField label="Foto (opcional)">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted transition-colors hover:text-foreground">
+            <input type="file" accept="image/*" onChange={onPhoto} className="hidden" />
+            {photoBusy ? (
+              'Subiendo…'
+            ) : photoPath ? (
+              <>
+                <Check className="size-4 text-success" /> Foto adjunta
+              </>
+            ) : (
+              <>
+                <Camera className="size-4" /> Adjuntar foto
+              </>
+            )}
+          </label>
+        </FormField>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
       <Button onClick={submit} loading={pending} className="w-full" size="lg">
-        Guardar registro
+        {isEdit ? 'Guardar cambios' : 'Guardar registro'}
       </Button>
     </div>
   );
