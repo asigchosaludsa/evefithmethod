@@ -7,6 +7,7 @@ import { SecondaryVideo } from '@/components/marketing/SecondaryVideo';
 import { WhatsappFab } from '@/components/marketing/WhatsappFab';
 import { Marquee } from '@/components/marketing/Marquee';
 import { Reveal } from '@/components/marketing/Reveal';
+import { PreviewPeek } from '@/components/landing/PreviewPeek';
 
 const STEPS = [
   { n: '1', title: 'La coach te invita', desc: 'Entras por un enlace de invitación y completas tu perfil en minutos.' },
@@ -88,6 +89,9 @@ export default function LandingPage() {
             </div>
           </Reveal>
         </section>
+
+        {/* Míralo por dentro: mini-previews fieles + CTA de demo */}
+        <PreviewPeek />
 
         {/* CTA band */}
         <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
