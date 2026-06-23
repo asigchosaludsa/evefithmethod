@@ -175,6 +175,9 @@ async function main() {
   // --- Profile + student_profile + coach link ---
   console.log('Configurando perfil de la alumna...');
   await sql(`
+    -- Identificarse como service_role en la transacción para que el trigger
+    -- prevent_role_escalation permita fijar el rol (si no, role queda NULL).
+    select set_config('request.jwt.claims', '{"role":"service_role"}', true);
     update public.profiles
        set full_name = 'Valentina Demo',
            role = 'student',
