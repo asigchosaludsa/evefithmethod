@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/common';
 import { LogoutButton } from '@/components/auth/LogoutButton';
+import { RouteProgress } from '@/components/navigation/RouteProgress';
 import { cn } from '@/lib/utils/cn';
 
 interface NavItem {
@@ -138,6 +139,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen">
+      <RouteProgress />
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-hairline bg-surface lg:block">
         <SidebarBody items={items} user={user} />

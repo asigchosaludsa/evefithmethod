@@ -92,6 +92,26 @@ h4,
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* Shimmer sweep for loading skeletons (used via animate-[shimmer_...]). */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Indeterminate top progress bar during route transitions. */
+@keyframes efm-route-progress {
+  0% {
+    transform: scaleX(0);
+  }
+  60% {
+    transform: scaleX(0.75);
+  }
+  100% {
+    transform: scaleX(0.92);
+  }
+}
+
 /* Keyframes for entrances (used via animate-[...] arbitrary values). */
 @keyframes fade {
   from {

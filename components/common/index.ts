@@ -12,3 +12,4 @@ export { StatCard, type StatCardProps } from './StatCard';
 export { ProgressRing, type ProgressRingProps } from './ProgressRing';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { YouTubeEmbed } from './YouTubeEmbed';
+export { Skeleton, SkeletonPageHeader, SkeletonCard, SkeletonSection } from './Skeleton';
