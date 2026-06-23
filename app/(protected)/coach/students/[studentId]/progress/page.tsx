@@ -10,6 +10,7 @@ import { WeightTrendChart } from '@/components/progress/WeightTrendChart';
 import { MeasurementDeltas } from '@/components/progress/MeasurementDeltas';
 import { TrainingSummaryCard } from '@/components/progress/TrainingSummaryCard';
 import { NutritionAdherenceSummary } from '@/components/progress/NutritionAdherenceSummary';
+import { PhotoGallery } from '@/components/progress/PhotoGallery';
 
 export default async function StudentProgressPage({
   params,
@@ -106,18 +107,7 @@ export default async function StudentProgressPage({
           {photos.length === 0 ? (
             <EmptyState title="Sin fotos" description="La alumna aún no subió fotos." />
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {photos.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={p.id}
-                  src={p.url}
-                  alt={`Foto de progreso (${p.photoType})`}
-                  loading="lazy"
-                  className="aspect-square w-full rounded-md border border-hairline object-cover"
-                />
-              ))}
-            </div>
+            <PhotoGallery photos={photos} />
           )}
         </CardBody>
       </Card>

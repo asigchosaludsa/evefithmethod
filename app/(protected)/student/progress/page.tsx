@@ -10,6 +10,7 @@ import { TrainingSummaryCard } from '@/components/progress/TrainingSummaryCard';
 import { NutritionAdherenceSummary } from '@/components/progress/NutritionAdherenceSummary';
 import { GoalWeightForm, MeasurementForm, WeightForm } from '@/components/student/ProgressForms';
 import { ProgressPhotoUpload } from '@/components/student/ProgressPhotoUpload';
+import { PhotoGallery } from '@/components/progress/PhotoGallery';
 
 export const metadata = { title: 'Mi progreso' };
 
@@ -100,18 +101,7 @@ export default async function StudentProgressPage() {
           {photos.length === 0 ? (
             <p className="text-sm text-faint">Aún no has subido fotos.</p>
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {photos.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={p.id}
-                  src={p.url}
-                  alt={`Foto de progreso (${p.photoType})`}
-                  loading="lazy"
-                  className="aspect-square w-full rounded-md border border-hairline object-cover"
-                />
-              ))}
-            </div>
+            <PhotoGallery photos={photos} />
           )}
         </CardBody>
       </Card>
