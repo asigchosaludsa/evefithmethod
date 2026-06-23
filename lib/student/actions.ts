@@ -210,6 +210,22 @@ export async function addMeasurement(_prev: ActionState, formData: FormData): Pr
   return { success: 'Medidas registradas' };
 }
 
+export async function setGoalWeight(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const student = await requireStudent();
+  const raw = formData.get('goal_weight_kg');
+  const value = raw === null || String(raw).trim() === '' ? null : Number(raw);
+  if (value !== null && (!Number.isFinite(value) || value <= 0 || value > 500)) {
+    return { error: 'Ingresa un peso objetivo válido.' };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('student_profiles')
+    .upsert({ user_id: student.id, goal_weight_kg: value }, { onConflict: 'user_id' });
+  if (error) return { error: error.message };
+  revalidatePath('/student/progress');
+  return { success: 'Meta actualizada' };
+}
+
 export async function markContentRead(assignmentId: string): Promise<void> {
   const student = await requireStudent();
   const supabase = await createClient();

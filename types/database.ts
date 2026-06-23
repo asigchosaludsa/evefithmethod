@@ -86,6 +86,7 @@ type StudentProfilesRow = {
   height_cm: number | null;
   initial_weight_kg: number | null;
   current_weight_kg: number | null;
+  goal_weight_kg: number | null;
   goal: string | null;
   training_level: string | null;
   notes: string | null;
@@ -100,6 +101,7 @@ type StudentProfilesInsert = {
   height_cm?: number | null;
   initial_weight_kg?: number | null;
   current_weight_kg?: number | null;
+  goal_weight_kg?: number | null;
   goal?: string | null;
   training_level?: string | null;
   notes?: string | null;
