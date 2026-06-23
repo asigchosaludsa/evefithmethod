@@ -107,7 +107,7 @@ export default async function StudentProgressPage({
           {photos.length === 0 ? (
             <EmptyState title="Sin fotos" description="La alumna aún no subió fotos." />
           ) : (
-            <PhotoGallery photos={photos} />
+            <PhotoGallery photos={photos} selectable={false} />
           )}
         </CardBody>
       </Card>

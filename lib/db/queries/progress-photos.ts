@@ -16,7 +16,7 @@ export async function getProgressPhotos(studentId: string): Promise<ProgressPhot
     .select('id, photo_path, photo_type, recorded_at')
     .eq('student_id', studentId)
     .order('recorded_at', { ascending: false })
-    .limit(24);
+    .limit(120);
 
   const list = rows ?? [];
   if (list.length === 0) return [];
