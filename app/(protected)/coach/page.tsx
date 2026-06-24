@@ -82,6 +82,7 @@ export default async function CoachDashboardPage() {
 
       {!hasStudents ? (
         <EmptyState
+          illustration="students"
           title="Aún no tienes alumnas"
           description="Invita a tu primera alumna para empezar a crear planes y dar seguimiento."
           action={

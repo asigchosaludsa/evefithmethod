@@ -25,7 +25,11 @@ export default async function CoachWorkoutsPage() {
     <div className="space-y-6">
       <PageHeader title="Entrenamientos" description="Todos los planes de entrenamiento que has creado." />
       {!plans || plans.length === 0 ? (
-        <EmptyState title="Sin planes de entrenamiento" description="Crea planes desde el perfil de cada alumna." />
+        <EmptyState
+          illustration="training"
+          title="Sin planes de entrenamiento"
+          description="Crea planes desde el perfil de cada alumna."
+        />
       ) : (
         <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-border bg-surface">
           {plans.map((p) => (

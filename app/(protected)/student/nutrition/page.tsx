@@ -48,6 +48,7 @@ export default async function StudentNutritionPlanPage() {
 
       {!plan ? (
         <EmptyState
+          illustration="nutrition"
           title="Sin plan activo"
           description="Tu coach asignará tu plan nutricional pronto. Mientras, puedes registrar tus comidas."
         />

@@ -27,6 +27,7 @@ export default async function CoachStudentsPage() {
 
       {students.length === 0 ? (
         <EmptyState
+          illustration="students"
           title="Aún no tienes alumnas"
           description="Invita a tu primera alumna para empezar."
           action={

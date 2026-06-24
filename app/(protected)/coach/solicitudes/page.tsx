@@ -24,6 +24,7 @@ export default async function CoachSolicitudesPage() {
 
       {items.length === 0 ? (
         <EmptyState
+          illustration="students"
           title="Aún no hay solicitudes"
           description="Cuando alguien complete el formulario público, aparecerá aquí."
         />

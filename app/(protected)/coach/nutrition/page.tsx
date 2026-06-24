@@ -26,6 +26,7 @@ export default async function CoachNutritionPage() {
       <PageHeader title="Nutrición" description="Todos los planes nutricionales que has creado." />
       {!plans || plans.length === 0 ? (
         <EmptyState
+          illustration="nutrition"
           title="Sin planes nutricionales"
           description="Crea planes desde el perfil de cada alumna."
         />

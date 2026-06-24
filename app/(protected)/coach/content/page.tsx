@@ -36,7 +36,7 @@ export default async function CoachContentPage() {
       />
 
       {active.length === 0 ? (
-        <EmptyState title="Sin contenido" description="Crea tu primer tip." />
+        <EmptyState illustration="tips" title="Sin contenido" description="Crea tu primer tip." />
       ) : (
         <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-border bg-surface">
           {active.map((p) => (

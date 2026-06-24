@@ -28,7 +28,11 @@ export default async function StudentContentPage() {
     <div className="space-y-6">
       <PageHeader title="Contenido y tips" description="Material que tu coach asignó para ti." />
       {list.length === 0 ? (
-        <EmptyState title="Sin contenido aún" description="Tu coach te asignará tips pronto." />
+        <EmptyState
+          illustration="tips"
+          title="Sin contenido aún"
+          description="Tu coach te asignará tips pronto."
+        />
       ) : (
         <div className="space-y-3">
           {list.map(({ assignment, post }) => (
