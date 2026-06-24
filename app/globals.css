@@ -316,6 +316,27 @@ h4,
   }
 }
 
+/* ===========================================================================
+   CinematicReveal — sección scroll-scrubbed "Tu día se arma".
+   La escena se maneja por la CSS var `--p` (estilos inline en el componente).
+   Aquí solo: el will-change acotado de las capas animadas, el dot del hint, y
+   el fallback reduced-motion (todo armado, sin scrubbing — `--p` queda en 1).
+   =========================================================================== */
+.efm-cinematic .efm-cine-phone,
+.efm-cinematic .efm-cine-cap {
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .efm-cine-dot {
+    animation: efm-cine-dot 1.6s var(--ease-in-out) infinite;
+  }
+}
+@keyframes efm-cine-dot {
+  0% { transform: translateY(0); opacity: 1; }
+  70% { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
 @keyframes efm-bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 .efm-bar { transform-origin: bottom; animation: efm-bar-grow 0.6s ease-out both; }
 @keyframes efm-line-draw { from { stroke-dashoffset: var(--efm-len); } to { stroke-dashoffset: 0; } }

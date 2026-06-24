@@ -8,6 +8,7 @@ import { WhatsappFab } from '@/components/marketing/WhatsappFab';
 import { Marquee } from '@/components/marketing/Marquee';
 import { Reveal } from '@/components/marketing/Reveal';
 import { PreviewPeek } from '@/components/landing/PreviewPeek';
+import { CinematicReveal } from '@/components/landing/CinematicReveal';
 
 const STEPS = [
   { n: '1', title: 'La coach te invita', desc: 'Entras por un enlace de invitación y completas tu perfil en minutos.' },
@@ -92,6 +93,9 @@ export default function LandingPage() {
 
         {/* Míralo por dentro: mini-previews fieles + CTA de demo */}
         <PreviewPeek />
+
+        {/* Pieza central cinematográfica: "tu día se arma mientras bajas" */}
+        <CinematicReveal />
 
         {/* CTA band */}
         <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
