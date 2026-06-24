@@ -9,6 +9,8 @@ import { Marquee } from '@/components/marketing/Marquee';
 import { Reveal } from '@/components/marketing/Reveal';
 import { PreviewPeek } from '@/components/landing/PreviewPeek';
 import { CinematicReveal } from '@/components/landing/CinematicReveal';
+import { MagneticButton } from '@/components/landing/MagneticButton';
+import { ScrollProgressBar } from '@/components/landing/ScrollProgressBar';
 
 const STEPS = [
   { n: '1', title: 'La coach te invita', desc: 'Entras por un enlace de invitación y completas tu perfil en minutos.' },
@@ -19,6 +21,8 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <>
+      {/* Barra de progreso de scroll — solo landing; distinta de RouteProgress (app). */}
+      <ScrollProgressBar />
       <PublicNav />
 
       <main className="flex-1">
@@ -113,11 +117,13 @@ export default function LandingPage() {
               Crea tu cuenta o acepta la invitación de tu coach y empieza con acompañamiento real.
             </p>
             <div className="relative mt-7 flex justify-center">
-              <Button asChild size="lg" className="btn-sheen btn-cta-glow">
-                <Link href="/solicitud">
-                  Empieza ya <ArrowRight className="size-4" />
-                </Link>
-              </Button>
+              <MagneticButton>
+                <Button asChild size="lg" className="btn-sheen btn-cta-glow">
+                  <Link href="/solicitud">
+                    Empieza ya <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </MagneticButton>
             </div>
           </Reveal>
         </section>

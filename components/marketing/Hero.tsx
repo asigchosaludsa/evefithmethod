@@ -5,13 +5,17 @@ import { DemoButton } from '@/components/landing/DemoButton';
 import { WordRotator } from './WordRotator';
 import { AppMockupHero } from './AppMockupHero';
 import { HeroBackgroundVideo } from './HeroBackgroundVideo';
+import { CursorGlow } from '@/components/landing/CursorGlow';
+import { MagneticButton } from '@/components/landing/MagneticButton';
 
 const WORDS = ['método.', 'fuerza.', 'disciplina.', 'constancia.'];
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Living background: premium video (poster-first) + scarlet glow + grid */}
+      {/* Living background: premium video (poster-first) + scarlet glow + grid.
+          Nota: este contenedor es `absolute inset-0` sobre la <section>, así que
+          CursorGlow (que mide su `parentElement`) obtiene coords relativas al hero. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <HeroBackgroundVideo />
         <div
@@ -22,6 +26,8 @@ export function Hero() {
             filter: 'blur(36px)',
           }}
         />
+        {/* Glow escarlata que sigue al cursor (desktop/hover only, reduced-motion → nada). */}
+        <CursorGlow />
         <div
           className="absolute inset-0 opacity-[0.06]"
           style={{
@@ -62,11 +68,13 @@ export function Hero() {
             className="hero-rise mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
             style={{ '--i': 3 } as React.CSSProperties}
           >
-            <Button asChild size="lg" className="btn-sheen btn-cta-glow">
-              <Link href="/solicitud">
-                Empieza ya <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+            <MagneticButton>
+              <Button asChild size="lg" className="btn-sheen btn-cta-glow">
+                <Link href="/solicitud">
+                  Empieza ya <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </MagneticButton>
             <DemoButton size="lg" />
           </div>
           <p
