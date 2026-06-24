@@ -408,6 +408,27 @@ h4,
   }
 }
 
+/* "En vivo" ping halo for the previews "Hola, Camila" card. A soft scarlet ring
+   that expands + fades out behind the solid dot. Self-contained (no reliance on
+   Tailwind's default animate-ping surviving the custom @theme) and neutralized by
+   the global reduced-motion block above. */
+@media (prefers-reduced-motion: no-preference) {
+  .efm-live-ping {
+    animation: efm-live-ping 2s var(--ease-out) infinite;
+  }
+}
+@keyframes efm-live-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  75%,
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
 /* Subtle scarlet pulse to draw the eye to the demo CTA. One soft halo that
    breathes; never bounces. Disabled under reduced motion (and while the button
    is busy — handled in the component by dropping the class). */

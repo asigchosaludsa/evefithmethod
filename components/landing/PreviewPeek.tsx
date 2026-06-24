@@ -2,6 +2,11 @@ import { Apple, Camera, Check, Dumbbell, Flame, LineChart, X } from 'lucide-reac
 import { Reveal } from '@/components/marketing/Reveal';
 import { DemoButton } from './DemoButton';
 
+/** Inline style helper to set the stagger step for `.efm-fade-up`. */
+function step(n: number): React.CSSProperties {
+  return { ['--efm-step' as string]: n };
+}
+
 /* ===========================================================================
    "Míralo por dentro" — mini-previews fieles de las pantallas reales de la app.
    Todo es mock estático (sin datos en vivo): valores coherentes, mismos tokens
@@ -260,7 +265,11 @@ function PhotosPreview() {
   );
 }
 
-/* --- Panel grande destacado: pantalla "Hoy" completa ------------------------- */
+/* --- Panel grande destacado: pantalla "Hoy" completa -------------------------
+   "Hola, Camila" con vida: avatar de iniciales, punto "en vivo" pulsando, línea
+   de contexto (día + racha) y entrada escalonada de las filas. Todo CSS-only
+   (visible por defecto sin JS; `efm-fade-up` solo anima al montar bajo
+   no-preference; el bloque global neutraliza todo bajo reduced-motion). */
 function FeaturedToday() {
   const rows = [
     { v: 75, label: 'Entrenamiento', color: 'var(--color-primary)', sub: 'Tren superior · 6 ejercicios' },
@@ -275,19 +284,51 @@ function FeaturedToday() {
       />
       <div className="relative flex items-center justify-between">
         <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary">EVEFIT / METHOD</span>
-        <span aria-hidden className="size-2.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
+        {/* Punto "en vivo": halo que respira (animate-ping, neutralizado por el
+            bloque reduced-motion global) detrás de un punto sólido + etiqueta. */}
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden className="relative flex size-2.5">
+            <span className="efm-live-ping absolute inline-flex size-full rounded-full bg-primary" />
+            <span className="relative inline-flex size-2.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">En vivo</span>
+        </span>
       </div>
-      <p className="relative mt-5 font-display text-2xl font-bold text-foreground">Hola, Camila</p>
-      <p className="relative text-sm text-muted">Esto es lo que te toca hoy.</p>
+
+      {/* Saludo con avatar de iniciales. */}
+      <div className="efm-fade-up relative mt-5 flex items-center gap-3" style={step(0)}>
+        <span
+          aria-hidden
+          className="flex size-11 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/15 font-display text-lg font-bold text-primary shadow-[inset_0_1px_0_color-mix(in_oklab,white_18%,transparent)]"
+        >
+          C
+        </span>
+        <div className="min-w-0">
+          <p className="font-display text-2xl font-bold leading-tight text-foreground">Hola, Camila</p>
+          <p className="text-sm text-muted">Esto es lo que te toca hoy.</p>
+        </div>
+      </div>
+
+      {/* Línea de contexto: día del programa + racha. */}
+      <p className="efm-fade-up relative mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted" style={step(1)}>
+        <span className="font-medium text-foreground">Día 12</span>
+        <span aria-hidden className="text-faint">·</span>
+        <span className="inline-flex items-center gap-1">
+          racha <Flame className="size-3.5 text-primary" aria-hidden /> 3
+        </span>
+        <span aria-hidden className="text-faint">·</span>
+        <span>Tren superior hoy</span>
+      </p>
 
       <div className="relative mt-5 grid gap-3">
-        {rows.map((r) => {
+        {rows.map((r, i) => {
           const dash = 2 * Math.PI * 18;
           const off = dash * (1 - r.v / 100);
           return (
             <div
               key={r.label}
-              className="flex items-center gap-4 rounded-2xl border border-hairline bg-surface px-4 py-3 transition-colors duration-200 group-hover:border-border"
+              className="efm-fade-up flex items-center gap-4 rounded-2xl border border-hairline bg-surface px-4 py-3 transition-colors duration-200 group-hover:border-border"
+              style={step(i + 2)}
             >
               <div className="relative size-[46px] shrink-0">
                 <svg width="46" height="46" viewBox="0 0 46 46">
