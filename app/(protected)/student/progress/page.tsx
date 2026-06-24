@@ -2,7 +2,7 @@ import { requireStudent } from '@/lib/auth/roles';
 import { getStudentProgressDashboard } from '@/lib/db/queries/progress-dashboard';
 import { getProgressPhotos } from '@/lib/db/queries/progress-photos';
 import { goalProgressPct, remainingToGoal } from '@/domain/progress/goals';
-import { Card, CardBody, CardHeader, CardTitle, PageHeader } from '@/components/common';
+import { Card, CardBody, CardHeader, CardTitle, PageHeader, SectionIllustration } from '@/components/common';
 import { GoalProgressRing } from '@/components/progress/GoalProgressRing';
 import { WeightTrendChart } from '@/components/progress/WeightTrendChart';
 import { MeasurementDeltas } from '@/components/progress/MeasurementDeltas';
@@ -28,7 +28,13 @@ export default async function StudentProgressPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mi progreso" description="Tu evolución de peso, medidas, entrenamiento y nutrición." />
+      <div className="relative overflow-hidden">
+        <SectionIllustration
+          variant="progress"
+          className="pointer-events-none absolute -right-1 -top-2 hidden w-28 text-primary/20 sm:block"
+        />
+        <PageHeader title="Mi progreso" description="Tu evolución de peso, medidas, entrenamiento y nutrición." />
+      </div>
 
       {/* Hero: meta + entrenamiento + nutrición */}
       <div className="grid gap-6 lg:grid-cols-3">
