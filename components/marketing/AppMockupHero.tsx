@@ -36,11 +36,29 @@ export function AppMockupHero() {
       >
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary">EVEFIT / METHOD</span>
-          <span aria-hidden className="size-2.5 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+            <span aria-hidden className="relative flex size-2">
+              <span className="efm-live-ping absolute inline-flex size-full rounded-full bg-primary opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            </span>
+            En vivo
+          </span>
         </div>
 
-        <p className="mt-4 font-display text-xl font-bold text-foreground">Hola, Camila</p>
-        <p className="text-xs text-muted">Tu método de hoy</p>
+        <div className="mt-4 flex items-center gap-3">
+          <span
+            aria-hidden
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 font-display text-base font-bold text-primary ring-1 ring-primary/30"
+          >
+            C
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-xl font-bold leading-tight text-foreground">Hola, Camila</p>
+            <p className="text-[11px] text-muted">
+              Día 12 · <span className="font-medium text-primary">racha 🔥 3</span> · tren superior hoy
+            </p>
+          </div>
+        </div>
 
         <div className="mt-4 space-y-2.5">
           {ROWS.map((r) => (
