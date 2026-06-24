@@ -7,6 +7,11 @@ export { Select, type SelectProps } from './Select';
 export { Card, CardHeader, CardTitle, CardBody, CardFooter } from './Card';
 export { Badge, type BadgeProps } from './Badge';
 export { Spinner, LoadingState, EmptyState, ErrorState, type EmptyStateProps } from './States';
+export {
+  SectionIllustration,
+  type SectionIllustrationProps,
+  type IllustrationVariant,
+} from './SectionIllustration';
 export { PageHeader, SectionHeader, type PageHeaderProps } from './PageHeader';
 export { StatCard, type StatCardProps } from './StatCard';
 export { ProgressRing, type ProgressRingProps } from './ProgressRing';
