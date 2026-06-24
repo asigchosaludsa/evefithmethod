@@ -1,8 +1,12 @@
+const WA_NUMBER = '593960406569';
+const WA_MESSAGE = 'Hola 👋 Quisiera más información sobre EveFit Method.';
+const WA_HREF = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(WA_MESSAGE)}`;
+
 /** Fixed bottom-right WhatsApp floating action button. Stays visible on scroll. */
 export function WhatsappFab() {
   return (
     <a
-      href="https://wa.me/593960406569"
+      href={WA_HREF}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Escríbenos por WhatsApp"

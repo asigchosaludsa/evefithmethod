@@ -1,30 +1,14 @@
-'use client';
-
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/common';
 import { DemoButton } from '@/components/landing/DemoButton';
+import { WordRotator } from './WordRotator';
 import { AppMockupHero } from './AppMockupHero';
 import { HeroBackgroundVideo } from './HeroBackgroundVideo';
 
-const WORDS = ['método', 'fuerza', 'disciplina', 'constancia'];
+const WORDS = ['método.', 'fuerza.', 'disciplina.', 'constancia.'];
 
 export function Hero() {
-  const [i, setI] = useState(0);
-  const [on, setOn] = useState(true);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setOn(false);
-      setTimeout(() => {
-        setI((p) => (p + 1) % WORDS.length);
-        setOn(true);
-      }, 260);
-    }, 2600);
-    return () => clearInterval(id);
-  }, []);
-
   return (
     <section className="relative overflow-hidden">
       {/* Living background: premium video (poster-first) + scarlet glow + grid */}
@@ -60,25 +44,12 @@ export function Hero() {
           </span>
           <h1
             className="hero-rise mt-6 font-display text-[clamp(2.6rem,7vw,5rem)] font-extrabold leading-[1.02] tracking-tight text-foreground"
-            style={{ '--i': 1, textWrap: 'balance' } as React.CSSProperties}
+            style={{ '--i': 1 } as React.CSSProperties}
           >
             Tu coaching fitness para entrenar
             <br />
             con{' '}
-            <span className="relative text-primary">
-              <span
-                aria-live="polite"
-                style={{
-                  display: 'inline-block',
-                  transition: 'opacity .26s var(--ease-out), transform .26s var(--ease-out)',
-                  opacity: on ? 1 : 0,
-                  transform: on ? 'translateY(0)' : 'translateY(0.25em)',
-                }}
-              >
-                {WORDS[i] ?? WORDS[0]}
-              </span>
-            </span>
-            .
+            <WordRotator words={WORDS} className="relative align-bottom text-primary" />
           </h1>
           <p
             className="hero-rise mt-5 max-w-md text-base text-muted sm:text-lg"
