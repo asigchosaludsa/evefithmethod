@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Badge, Button, EmptyState, PageHeader, SectionHeader } from '@/components/common';
 import { ArchiveItemButton } from '@/components/coach/ArchiveItemButton';
 import { ExerciseLibraryBrowser, type LibraryExercise } from '@/components/coach/ExerciseLibraryBrowser';
+import { MuscleGroupIcon } from '@/components/workouts/MuscleGroupIcon';
 
 export const metadata = { title: 'Ejercicios' };
 
@@ -36,7 +37,7 @@ export default async function CoachExercisesPage() {
       />
 
       {active.length === 0 ? (
-        <EmptyState title="Sin ejercicios" description="Crea tu primer ejercicio." />
+        <EmptyState illustration="training" title="Sin ejercicios" description="Crea tu primer ejercicio." />
       ) : (
         <ExerciseLibraryBrowser exercises={active as LibraryExercise[]} />
       )}
@@ -52,7 +53,14 @@ export default async function CoachExercisesPage() {
               >
                 <Link href={`/coach/exercises/${e.id}`} className="block">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-muted">{e.name}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <MuscleGroupIcon
+                        muscleGroup={e.muscle_group}
+                        className="size-4"
+                        title={e.muscle_group ?? undefined}
+                      />
+                      <p className="truncate font-medium text-muted">{e.name}</p>
+                    </div>
                     {e.is_global && <Badge tone="neutral">Global</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-faint">{e.muscle_group ?? 'General'}</p>

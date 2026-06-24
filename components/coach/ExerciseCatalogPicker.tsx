@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import { filterExercises, type ExerciseFilters as Filters, type FilterableExercise } from '@/domain/exercises/filter';
-import { muscleGroupColor } from '@/lib/constants/exercises';
 import { addPlanExercises } from '@/lib/coach/actions';
 import { Button } from '@/components/common';
 import { ExerciseFilters } from '@/components/coach/ExerciseFilters';
+import { MuscleGroupBadge } from '@/components/workouts/MuscleGroupIcon';
 
 export interface CatalogExercise extends FilterableExercise {
   thumbnail_url: string | null;
@@ -149,12 +149,12 @@ export function ExerciseCatalogPicker({
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={e.thumbnail_url} alt="" className="size-full object-cover" />
                           ) : (
-                            <span
-                              className="flex size-9 items-center justify-center rounded-full text-sm font-bold text-white"
-                              style={{ backgroundColor: muscleGroupColor(e.muscle_group) }}
-                            >
-                              {(e.muscle_group ?? 'E').slice(0, 1)}
-                            </span>
+                            <MuscleGroupBadge
+                              muscleGroup={e.muscle_group}
+                              className="size-11"
+                              iconClassName="size-6"
+                              title={e.muscle_group ?? undefined}
+                            />
                           )}
                         </div>
                         <p className="text-sm font-medium leading-tight text-foreground">{e.name}</p>

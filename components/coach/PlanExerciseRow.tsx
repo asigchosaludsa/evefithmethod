@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pencil, Trash2, X } from 'lucide-react';
 import { updatePlanExercise, deletePlanExercise } from '@/lib/coach/actions';
 import { Button } from '@/components/common';
+import { MuscleGroupIcon } from '@/components/workouts/MuscleGroupIcon';
 import type { PlanExerciseRow as Row } from '@/lib/db/queries/workout-plan';
 
 export function PlanExerciseRow({ ex, planId }: { ex: Row; planId: string }) {
@@ -46,15 +47,22 @@ export function PlanExerciseRow({ ex, planId }: { ex: Row; planId: string }) {
   if (!editing) {
     return (
       <li className="flex items-center justify-between gap-3 py-2">
-        <div>
-          <p className="font-medium text-foreground">{ex.exercise_name}</p>
-          <p className="tabular text-sm text-muted">
-            {ex.sets} series × {ex.reps} reps
-            {ex.rest_seconds ? ` · ${ex.rest_seconds}s desc.` : ''}
-            {ex.tempo ? ` · tempo ${ex.tempo}` : ''}
-            {ex.suggested_weight_kg ? ` · ${ex.suggested_weight_kg}kg` : ''}
-          </p>
-          {ex.notes && <p className="text-xs text-faint">{ex.notes}</p>}
+        <div className="flex min-w-0 items-start gap-2.5">
+          <MuscleGroupIcon
+            muscleGroup={ex.muscle_group}
+            className="mt-0.5 size-5"
+            title={ex.muscle_group ?? undefined}
+          />
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">{ex.exercise_name}</p>
+            <p className="tabular text-sm text-muted">
+              {ex.sets} series × {ex.reps} reps
+              {ex.rest_seconds ? ` · ${ex.rest_seconds}s desc.` : ''}
+              {ex.tempo ? ` · tempo ${ex.tempo}` : ''}
+              {ex.suggested_weight_kg ? ` · ${ex.suggested_weight_kg}kg` : ''}
+            </p>
+            {ex.notes && <p className="text-xs text-faint">{ex.notes}</p>}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setEditing(true)} className="text-faint hover:text-foreground" aria-label="Editar ejercicio">
@@ -73,7 +81,14 @@ export function PlanExerciseRow({ ex, planId }: { ex: Row; planId: string }) {
   return (
     <li className="space-y-2 py-2">
       <div className="flex items-center justify-between">
-        <p className="font-medium text-foreground">{ex.exercise_name}</p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <MuscleGroupIcon
+            muscleGroup={ex.muscle_group}
+            className="size-5"
+            title={ex.muscle_group ?? undefined}
+          />
+          <p className="font-medium text-foreground">{ex.exercise_name}</p>
+        </div>
         <button type="button" onClick={() => setEditing(false)} className="text-faint hover:text-foreground" aria-label="Cancelar">
           <X className="size-4" />
         </button>

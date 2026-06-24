@@ -3,9 +3,9 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { filterExercises, type ExerciseFilters as Filters, type FilterableExercise } from '@/domain/exercises/filter';
-import { muscleGroupColor } from '@/lib/constants/exercises';
 import { Badge } from '@/components/common';
 import { ExerciseFilters } from '@/components/coach/ExerciseFilters';
+import { MuscleGroupBadge } from '@/components/workouts/MuscleGroupIcon';
 
 export interface LibraryExercise extends FilterableExercise {
   thumbnail_url: string | null;
@@ -36,12 +36,12 @@ export function ExerciseLibraryBrowser({ exercises }: { exercises: LibraryExerci
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={e.thumbnail_url} alt="" className="size-full object-cover" />
                   ) : (
-                    <span
-                      className="flex size-7 items-center justify-center rounded-full text-xs font-bold text-white"
-                      style={{ backgroundColor: muscleGroupColor(e.muscle_group) }}
-                    >
-                      {(e.muscle_group ?? 'E').slice(0, 1)}
-                    </span>
+                    <MuscleGroupBadge
+                      muscleGroup={e.muscle_group}
+                      className="size-9"
+                      iconClassName="size-5"
+                      title={e.muscle_group ?? undefined}
+                    />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
