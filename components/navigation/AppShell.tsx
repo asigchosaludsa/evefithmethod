@@ -7,6 +7,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import {
   Apple,
   BookOpen,
+  Calculator,
   Dumbbell,
   Home,
   Inbox,
@@ -43,6 +44,7 @@ const COACH_NAV: NavItem[] = [
   { label: 'Nutrición', href: '/coach/nutrition', icon: Apple },
   { label: 'Entrenamientos', href: '/coach/workouts', icon: Dumbbell },
   { label: 'Ejercicios', href: '/coach/exercises', icon: ListChecks },
+  { label: 'Calculadora', href: '/coach/calculadora', icon: Calculator },
   { label: 'Contenido', href: '/coach/content', icon: BookOpen },
   { label: 'Plantillas', href: '/coach/plantillas', icon: Mail },
   { label: 'Cuentas', href: '/coach/cuentas', icon: UserCog },
