@@ -58,3 +58,6 @@ Thumbs.db
 # Operations runbook with real tokens for resuming sessions (NEVER commit)
 OPERATIONS.local.md
 *.local.md
+
+# Source art for body-composition slider (processed output lives in public/body)
+media/

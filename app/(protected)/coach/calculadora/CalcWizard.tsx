@@ -816,145 +816,81 @@ function SliderRow({
   );
 }
 
-// ─── BodySilhouette ───────────────────────────────────────────────────────────
-// Organic bezier-curve silhouettes inspired by standard body-composition charts.
-// All shapes are SVG path elements so they look like real human outlines rather
-// than stacked geometry. Fill color transitions via CSS; shape updates on each
-// slider step (25 kcal ≈ 1-2 % adj change — imperceptibly small per step).
+// --- BodySilhouette --------------------------------------------------------
+// Real anatomical figures (10 body-composition stages per sex) processed to
+// transparent PNGs in /public/body. Stages crossfade as the adjustment moves:
+// aggressive deficit -> leanest figure, surplus -> heavier/larger figure.
 
-function BodySilhouette({ sex, adjustmentPct, compact }: {
-  sex: Sex; adjustmentPct: number; compact: boolean;
+const MALE_STAGES = Array.from({ length: 10 }, (_, i) => `/body/male_${String(i + 1).padStart(2, '0')}.webp`);
+const FEMALE_STAGES = Array.from({ length: 10 }, (_, i) => `/body/female_${String(i + 1).padStart(2, '0')}.webp`);
+
+// Map the adjustment % (-25..+30) to a stage index 0..9.
+// Piecewise so maintenance (0%) lands on a lean-athletic figure, deficit pushes
+// toward the leanest, and surplus walks up toward more body mass.
+function stageForAdjustment(adj: number): number {
+  const a = Math.max(-25, Math.min(30, adj));
+  const idx = a <= 0
+    ? Math.round(((a + 25) / 25) * 3)      // -25 -> 0, 0 -> 3
+    : 3 + Math.round((a / 30) * 6);        // 0 -> 3, +30 -> 9
+  return Math.max(0, Math.min(9, idx));
+}
+
+function BodySilhouette({
+  sex,
+  adjustmentPct,
+  compact,
+}: {
+  sex: Sex;
+  adjustmentPct: number;
+  compact: boolean;
 }) {
   const adj = Math.max(-25, Math.min(30, adjustmentPct));
-  const t   = (adj + 25) / 55; // 0 = very lean (-25%), 1 = heavy (+30%)
-  const cx  = 50;
-  const li  = (a: number, b: number) => a + (b - a) * t;
+  const stages = sex === 'female' ? FEMALE_STAGES : MALE_STAGES;
+  const active = stageForAdjustment(adj);
 
-  const fill =
+  const accent =
     adj < -15 ? '#60A5FA' : adj < 0 ? '#A78BFA' :
-    adj === 0  ? '#34D399' : adj < 15 ? '#FBBF24' : '#F87171';
+    adj === 0 ? '#34D399' : adj < 15 ? '#FBBF24' : '#F87171';
 
   const stateLabel =
     adj < -20 ? 'Corte extremo' : adj < -10 ? 'Déficit activo' :
-    adj < 0   ? 'Déficit ligero' : adj === 0 ? 'Mantenimiento' :
-    adj < 15  ? 'Lean bulk' : adj < 25 ? 'Volumen' : 'Volumen alto';
+    adj < 0 ? 'Déficit ligero' : adj === 0 ? 'Mantenimiento' :
+    adj < 15 ? 'Lean bulk' : adj < 25 ? 'Volumen' : 'Volumen alto';
 
-  const fs = { fill, transition: 'fill 0.45s ease' };
-  const svgW = compact ? 52 : 68;
-  const svgH = compact ? 108 : 148;
-
-  // Fixed Y grid (viewBox 0 0 100 232)
-  const hc=18, nb=42, sh=50, ap=70, ch=82, wa=100, hi=118, cr=132, mt=157, kn=176, ca=200, an=215, ft=224;
-
-  if (sex === 'female') {
-    const nW  = li(4.5, 6.5);
-    const sW  = li(14,  20);     // shoulder half-width
-    const aW  = li(10,  14);     // armpit width
-    const cW  = li(12,  18);     // chest/bust half-width
-    const wW  = li(8,   16);     // waist half-width
-    const hW  = li(17,  27);     // hip half-width
-    const bC  = li(9,   22);     // belly control point
-    const tW  = li(9,   18);     // thigh half-width (total, divided between legs)
-    const gp  = 3;
-    const kW  = li(5.5, 10);
-    const cW2 = li(4.5, 8.5);
-    const aN  = li(2.5, 3.5);
-    const arW = li(4.5, 7);
-
-    // Full torso outline (neck → shoulders → chest → waist → hips → crotch, mirrored)
-    const torso = `
-      M ${cx+nW} ${nb}
-      C ${cx+nW+4} ${nb+2} ${cx+sW+3} ${sh-7} ${cx+sW} ${sh}
-      C ${cx+sW+2} ${sh+10} ${cx+aW+2} ${ap-6} ${cx+aW} ${ap}
-      Q ${cx+cW+3} ${ap+10} ${cx+cW} ${ch}
-      C ${cx+cW-1} ${ch+13} ${cx+bC} ${wa-4} ${cx+wW} ${wa}
-      C ${cx+bC} ${wa+10} ${cx+hW+3} ${hi-7} ${cx+hW} ${hi}
-      C ${cx+hW} ${hi+9} ${cx+gp+tW+2} ${cr-5} ${cx+gp+tW} ${cr}
-      Q ${cx} ${cr+4} ${cx-gp-tW} ${cr}
-      C ${cx-gp-tW-2} ${cr-5} ${cx-hW} ${hi+9} ${cx-hW} ${hi}
-      C ${cx-hW-3} ${hi-7} ${cx-bC} ${wa+10} ${cx-wW} ${wa}
-      C ${cx-bC} ${wa-4} ${cx-cW+1} ${ch+13} ${cx-cW} ${ch}
-      Q ${cx-cW-3} ${ap+10} ${cx-aW} ${ap}
-      C ${cx-aW-2} ${ap-6} ${cx-sW-2} ${sh+10} ${cx-sW} ${sh}
-      C ${cx-sW-3} ${sh-7} ${cx-nW-4} ${nb+2} ${cx-nW} ${nb} Z`;
-
-    const leg = (lc: number) => {
-      const hw = tW / 2;
-      return `M ${lc+hw} ${cr} Q ${lc+hw+1} ${mt} ${lc+kW} ${kn} Q ${lc+cW2} ${kn+15} ${lc+cW2} ${ca} Q ${lc+aN} ${ca+12} ${lc+aN} ${an} L ${lc+aN+2} ${ft} L ${lc-aN-1} ${ft} L ${lc-aN} ${an} Q ${lc-cW2} ${ca+12} ${lc-cW2} ${ca} Q ${lc-kW-1} ${kn+15} ${lc-kW} ${kn} Q ${lc-hw-1} ${mt} ${lc-hw} ${cr} Z`;
-    };
-
-    const arm = (ix: number, side: 1 | -1) => {
-      const ox = ix + side * arW;
-      const eY = wa + 5; const hY = eY + 40;
-      return `M ${ix} ${sh+5} Q ${ox} ${sh+12} ${ox} ${eY} Q ${ox} ${hY-8} ${ox-side*2} ${hY} L ${ix+side} ${hY} Q ${ix} ${hY-8} ${ix} ${eY} Q ${ix} ${sh+12} ${ix} ${sh+5} Z`;
-    };
-
-    return (
-      <div className="flex flex-col items-center gap-1">
-        <svg viewBox="0 0 100 232" width={svgW} height={svgH}>
-          <ellipse cx={cx} cy={hc} rx={10} ry={12} style={fs} />
-          <path d={torso} style={fs} />
-          <path d={leg(cx+gp+tW/2)} style={fs} />
-          <path d={leg(cx-gp-tW/2)} style={fs} />
-          <path d={arm(cx+sW+0.5,  1)} style={fs} />
-          <path d={arm(cx-sW-0.5, -1)} style={fs} />
-        </svg>
-        <span className="text-[10px] font-semibold" style={{ color: fill, transition: 'color 0.45s' }}>{stateLabel}</span>
-      </div>
-    );
-  }
-
-  // ── Male ──────────────────────────────────────────────────────────────────────
-  const nW  = li(6,   9);
-  const sW  = li(18,  27);   // broad shoulders
-  const aW  = li(14,  18);
-  const cW  = li(16,  24);
-  const wW  = li(11,  21);   // less hourglass than female
-  const hW  = li(14,  22);   // hips narrower than shoulders
-  const bC  = li(13,  27);   // belly protrudes more with surplus
-  const tW  = li(10,  19);
-  const gp  = 3.5;
-  const kW  = li(6,   11);
-  const cW2 = li(5.5, 9.5);
-  const aN  = li(2.8, 4);
-  const arW = li(5.5, 8.5);
-
-  const torso = `
-    M ${cx+nW} ${nb}
-    C ${cx+nW+5} ${nb+2} ${cx+sW+4} ${sh-7} ${cx+sW} ${sh}
-    C ${cx+sW+2} ${sh+10} ${cx+aW+3} ${ap-5} ${cx+aW} ${ap}
-    C ${cx+aW+1} ${ap+15} ${cx+bC} ${wa-6} ${cx+wW} ${wa}
-    C ${cx+bC} ${wa+10} ${cx+hW+3} ${hi-7} ${cx+hW} ${hi}
-    C ${cx+hW} ${hi+8} ${cx+gp+tW+3} ${cr-5} ${cx+gp+tW} ${cr}
-    Q ${cx} ${cr+4} ${cx-gp-tW} ${cr}
-    C ${cx-gp-tW-3} ${cr-5} ${cx-hW} ${hi+8} ${cx-hW} ${hi}
-    C ${cx-hW-3} ${hi-7} ${cx-bC} ${wa+10} ${cx-wW} ${wa}
-    C ${cx-bC} ${wa-6} ${cx-aW-1} ${ap+15} ${cx-aW} ${ap}
-    C ${cx-aW-3} ${ap-5} ${cx-sW-2} ${sh+10} ${cx-sW} ${sh}
-    C ${cx-sW-4} ${sh-7} ${cx-nW-5} ${nb+2} ${cx-nW} ${nb} Z`;
-
-  const leg = (lc: number) => {
-    const hw = tW / 2;
-    return `M ${lc+hw} ${cr} Q ${lc+hw+1} ${mt} ${lc+kW} ${kn} Q ${lc+cW2+1} ${kn+15} ${lc+cW2} ${ca} Q ${lc+aN+1} ${ca+13} ${lc+aN} ${an} L ${lc+aN+3} ${ft} L ${lc-aN-1} ${ft} L ${lc-aN} ${an} Q ${lc-cW2-1} ${ca+13} ${lc-cW2} ${ca} Q ${lc-kW-1} ${kn+15} ${lc-kW} ${kn} Q ${lc-hw-1} ${mt} ${lc-hw} ${cr} Z`;
-  };
-
-  const arm = (ix: number, side: 1 | -1) => {
-    const ox = ix + side * arW;
-    const eY = wa + 2; const hY = eY + 45;
-    return `M ${ix} ${sh+5} Q ${ox} ${sh+12} ${ox} ${eY} Q ${ox} ${hY-10} ${ox-side*2} ${hY} L ${ix+side} ${hY} Q ${ix} ${hY-10} ${ix} ${eY} Q ${ix} ${sh+12} ${ix} ${sh+5} Z`;
-  };
+  const w = compact ? 104 : 132;
+  const h = compact ? 224 : 280;
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 100 232" width={svgW} height={svgH}>
-        <ellipse cx={cx} cy={hc} rx={11} ry={12} style={fs} />
-        <path d={torso} style={fs} />
-        <path d={leg(cx+gp+tW/2)} style={fs} />
-        <path d={leg(cx-gp-tW/2)} style={fs} />
-        <path d={arm(cx+sW+0.5,  1)} style={fs} />
-        <path d={arm(cx-sW-0.5, -1)} style={fs} />
-      </svg>
-      <span className="text-[10px] font-semibold" style={{ color: fill, transition: 'color 0.45s' }}>{stateLabel}</span>
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <div
+        className="relative flex items-end justify-center rounded-xl overflow-hidden"
+        style={{
+          width: w,
+          height: h,
+          background: 'radial-gradient(120% 90% at 50% 100%, ' + accent + '22 0%, transparent 70%)',
+          transition: 'background 0.45s ease',
+        }}
+      >
+        {stages.map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={i}
+            src={src}
+            alt={i === active ? `Silueta ${sex === 'female' ? 'femenina' : 'masculina'} — ${stateLabel}` : ''}
+            aria-hidden={i !== active}
+            draggable={false}
+            className="absolute inset-0 h-full w-full select-none object-contain object-bottom"
+            style={{
+              opacity: i === active ? 1 : 0,
+              transition: 'opacity 0.5s ease',
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+            }}
+          />
+        ))}
+      </div>
+      <span className="text-[11px] font-semibold" style={{ color: accent, transition: 'color 0.45s' }}>
+        {stateLabel}
+      </span>
     </div>
   );
 }
