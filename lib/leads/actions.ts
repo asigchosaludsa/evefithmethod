@@ -59,7 +59,8 @@ export async function submitLeadRequest(
   const { error } = await admin.from('leads').insert({
     full_name: data.full_name,
     email: data.email,
-    phone: data.phone,
+    // Stored in international form (e.g. +593961029834) so WhatsApp links work.
+    phone: `+${data.phone}`,
     goal: data.goal,
     experience_level: data.experience_level ?? null,
     age: data.age ?? null,
@@ -78,7 +79,7 @@ export async function submitLeadRequest(
       nombre: data.full_name,
       objetivo: data.goal,
       email: data.email,
-      telefono: data.phone,
+      telefono: `+${data.phone}`,
     });
     if (tpl) await sendEmail({ to: ownerEmail, subject: tpl.subject, html: tpl.html });
   }

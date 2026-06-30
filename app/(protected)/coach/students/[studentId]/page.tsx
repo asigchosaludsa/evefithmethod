@@ -21,6 +21,7 @@ import { getStudentRecentActivity } from '@/lib/db/queries/student-recent-activi
 import { goalProgressPct, remainingToGoal } from '@/domain/progress/goals';
 import { createClient } from '@/lib/supabase/server';
 import { renderWhatsapp } from '@/lib/email/render';
+import { normalizeWhatsappNumber, isValidWhatsappNumber } from '@/lib/utils/whatsapp';
 import { todayISO, daysAgoISO } from '@/lib/utils/date';
 import {
   Badge,
@@ -88,7 +89,9 @@ export default async function StudentDetailPage({
 
   const wa = await renderWhatsapp('wa_welcome', { nombre: firstName, link: `${SITE}/login` });
   const waHref =
-    wa && phone ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(wa.text)}` : null;
+    wa && isValidWhatsappNumber(phone)
+      ? `https://wa.me/${normalizeWhatsappNumber(phone)}?text=${encodeURIComponent(wa.text)}`
+      : null;
 
   // --- Datos "de un vistazo" (reusan getStudentProgressDashboard) ---
   const { weight, training, nutrition, measurements } = dashboard;

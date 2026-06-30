@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Check, Copy, Mail, MessageCircle, UserPlus } from 'lucide-react';
 import { Button } from '@/components/common';
 import { convertLeadToInvitation, resendInvitationByEmail } from '@/lib/coach/lead-actions';
-import { buildWhatsappInviteHref } from '@/lib/utils/whatsapp';
+import { buildWhatsappInviteHref, normalizeWhatsappNumber } from '@/lib/utils/whatsapp';
 
 interface ConvertLeadButtonProps {
   leadId: string;
@@ -25,6 +25,8 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [resend, setResend] = React.useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  // Editable WhatsApp number (prefilled from the lead, normalized to intl form).
+  const [waPhone, setWaPhone] = React.useState('');
 
   if (alreadyConverted && !generated) {
     return <span className="text-xs font-medium text-faint">Ya convertida</span>;
@@ -42,6 +44,8 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
           studentName: result.studentName,
           emailed: result.emailed,
         });
+        const intl = normalizeWhatsappNumber(result.phone);
+        setWaPhone(intl ? `+${intl}` : '');
       } else {
         setError(result.error);
       }
@@ -71,7 +75,7 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
   }
 
   const waHref = buildWhatsappInviteHref({
-    phone: generated.phone,
+    phone: waPhone,
     studentName: generated.studentName,
     link: generated.link,
   });
@@ -101,6 +105,27 @@ export function ConvertLeadButton({ leadId, alreadyConverted = false }: ConvertL
         aria-label="Enlace de invitación"
       />
       <p className="text-[11px] text-faint">Guarda este enlace, no se vuelve a mostrar.</p>
+
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted" htmlFor={`wa-${leadId}`}>
+          Número de WhatsApp (con código de país)
+        </label>
+        <input
+          id={`wa-${leadId}`}
+          type="tel"
+          inputMode="tel"
+          value={waPhone}
+          onChange={(e) => setWaPhone(e.target.value)}
+          placeholder="+593961234567"
+          className="w-full rounded-md border border-border bg-canvas px-2.5 py-1.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-1"
+        />
+        {waHref === null && waPhone.trim() !== '' && (
+          <p className="text-[11px] text-warning">
+            Número inválido para WhatsApp. Revisa el código de país y los dígitos.
+          </p>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={handleCopy}>
           {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}

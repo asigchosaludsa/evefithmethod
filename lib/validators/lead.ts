@@ -22,11 +22,14 @@ export const leadRequestSchema = z.object({
     .min(2, 'Ingresa tu nombre completo')
     .max(120, 'El nombre es demasiado largo'),
   email: z.email('Email inválido'),
+  // PhoneInput posts the combined international number as digits only
+  // (country code + national, no '+'). Ecuador mobiles normalize to 12 digits.
   phone: z
     .string()
     .trim()
-    .min(6, 'Ingresa un teléfono válido')
-    .max(30, 'El teléfono es demasiado largo'),
+    .regex(/^\d+$/, 'Teléfono inválido')
+    .min(8, 'Ingresa un número de teléfono válido con código de país')
+    .max(15, 'El teléfono es demasiado largo'),
   goal: z.enum(GOAL_OPTIONS, { message: 'Selecciona un objetivo' }),
   experience_level: z.preprocess(
     emptyToUndefined,

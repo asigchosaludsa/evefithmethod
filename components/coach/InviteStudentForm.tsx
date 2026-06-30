@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Check, Copy, Mail, MessageCircle, UserPlus } from 'lucide-react';
 import { inviteStudentAction, type InviteState } from '@/lib/auth/invitation-actions';
-import { Button, FormField, Input, Textarea, SubmitButton } from '@/components/common';
+import { Button, FormField, Input, Textarea, SubmitButton, PhoneInput } from '@/components/common';
 import { buildWhatsappInviteHref } from '@/lib/utils/whatsapp';
 
 const initial: InviteState = {};
@@ -14,7 +14,8 @@ export function InviteStudentForm() {
   const [state, action] = useActionState(inviteStudentAction, initial);
   const [copied, setCopied] = useState(false);
   const [channel, setChannel] = useState<Channel>('email');
-  const [phone, setPhone] = useState('+593 ');
+  // International digits (no '+') produced by PhoneInput, used to build wa.me.
+  const [waNumber, setWaNumber] = useState('');
 
   async function copy(link: string) {
     try {
@@ -27,7 +28,7 @@ export function InviteStudentForm() {
   }
 
   if (state.link) {
-    const waHref = buildWhatsappInviteHref({ phone, studentName: state.studentName, link: state.link });
+    const waHref = buildWhatsappInviteHref({ phone: waNumber, studentName: state.studentName, link: state.link });
     return (
       <div className="space-y-4">
         <div className="flex items-start gap-3 rounded-lg border border-success/25 bg-success/5 p-4">
@@ -47,16 +48,13 @@ export function InviteStudentForm() {
             <FormField
               label="Número de WhatsApp"
               htmlFor="wa_phone"
-              hint="Con código de país. Ej: +593 99 123 4567"
+              hint="Elige el país e ingresa el número de celular."
             >
-              <Input
+              <PhoneInput
                 id="wa_phone"
                 name="wa_phone"
-                type="tel"
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+593 99 123 4567"
+                defaultNational=""
+                onChange={(intl) => setWaNumber(intl)}
               />
             </FormField>
             <Button type="button" variant="primary" className="w-full" asChild={waHref !== null} disabled={waHref === null}>
@@ -144,17 +142,9 @@ export function InviteStudentForm() {
         <FormField
           label="Número de WhatsApp"
           htmlFor="phone"
-          hint="Opcional ahora — podrás ajustarlo antes de abrir WhatsApp. Con código de país."
+          hint="Opcional ahora — podrás ajustarlo antes de abrir WhatsApp."
         >
-          <Input
-            id="phone"
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+593 99 123 4567"
-          />
+          <PhoneInput id="phone" name="phone" onChange={(intl) => setWaNumber(intl)} />
         </FormField>
       )}
       <FormField label="Objetivo" htmlFor="goal" hint="Opcional — ej: recomposición corporal">

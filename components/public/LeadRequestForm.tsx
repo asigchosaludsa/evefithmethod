@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { submitLeadRequest } from '@/lib/leads/actions';
 import { initialActionState } from '@/lib/auth/action-state';
-import { Button, FormField, Input, Select, Textarea, SubmitButton } from '@/components/common';
+import { Button, FormField, Input, Select, Textarea, SubmitButton, PhoneInput } from '@/components/common';
 import { GOAL_OPTIONS, LEVEL_OPTIONS } from '@/lib/validators/lead';
 import { TurnstileField } from '@/components/auth/TurnstileField';
 
@@ -36,8 +36,8 @@ export function LeadRequestForm() {
       <FormField label="Email" htmlFor="email" required>
         <Input id="email" name="email" type="email" autoComplete="email" required />
       </FormField>
-      <FormField label="Teléfono / WhatsApp" htmlFor="phone" required>
-        <Input id="phone" name="phone" type="tel" autoComplete="tel" required />
+      <FormField label="Teléfono / WhatsApp" htmlFor="phone" required hint="Elige tu país e ingresa tu número de celular.">
+        <PhoneInput id="phone" name="phone" required />
       </FormField>
       <FormField label="Objetivo principal" htmlFor="goal" required>
         <Select id="goal" name="goal" defaultValue="" placeholder="Selecciona tu objetivo" required>

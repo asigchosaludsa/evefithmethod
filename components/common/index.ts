@@ -4,6 +4,7 @@ export { BrandIcon } from './BrandIcon';
 export { SubmitButton } from './SubmitButton';
 export { Label, Input, Textarea, FormField, type FormFieldProps } from './form';
 export { Select, type SelectProps } from './Select';
+export { PhoneInput, type PhoneInputProps } from './PhoneInput';
 export { Card, CardHeader, CardTitle, CardBody, CardFooter } from './Card';
 export { Badge, type BadgeProps } from './Badge';
 export { Spinner, LoadingState, EmptyState, ErrorState, type EmptyStateProps } from './States';
