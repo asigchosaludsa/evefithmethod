@@ -465,24 +465,34 @@ function ResultStep({
         <div className="space-y-2">
           {result.warnings.includes('bajo_piso') && (
             <WarningBanner
-              msg="Calorías por debajo del mínimo recomendado"
-              detail="Esta ingesta puede afectar el metabolismo, las hormonas y el rendimiento. Sube el ajuste a −15% o menos."
+              severity="danger"
+              title="Calorías peligrosamente bajas"
+              consequence="→ metabolismo lento + pérdida muscular + desajuste hormonal"
+              detail={`Con menos de ${form.sex === 'female' ? '1 200' : '1 500'} kcal el cuerpo activa el "modo ahorro": baja el metabolismo basal, degrada músculo para obtener energía y altera hormonas clave como la tiroides, el cortisol y el estrógeno. El peso baja al principio, pero el cuerpo se vuelve cada vez más resistente y al salir de la dieta recupera todo más rápido. Sube el ajuste a −15 % o menos para un déficit sostenible.`}
             />
           )}
           {result.warnings.includes('ritmo_agresivo') && !result.warnings.includes('superavit_agresivo') && (
             <WarningBanner
-              msg={isDeficit ? 'Déficit agresivo — riesgo de catabolismo muscular' : 'Ritmo de cambio agresivo'}
+              severity="warn"
+              title={isDeficit ? 'Déficit agresivo — vas a perder músculo' : 'Ritmo de cambio muy rápido'}
+              consequence={
+                isDeficit
+                  ? '→ de cada 5 kg perdidos, ~2 serán músculo (no grasa)'
+                  : '→ el exceso de calorías no puede convertirse en músculo tan rápido'
+              }
               detail={
                 isDeficit
-                  ? 'Con este déficit tu cuerpo puede degradar músculo para obtener energía. El rango óptimo es −15% a −20%.'
-                  : 'El ritmo de ganancia supera lo que el músculo puede sintetizar. El exceso se acumula como grasa.'
+                  ? 'Al perder más del 1 % de tu peso por semana el cuerpo no puede extraer toda la energía de la grasa sola: empieza a degradar músculo (catabolismo). Bajarás de peso pero perderás fuerza y tu metabolismo caerá. Cuando termines el proceso recuperarás el peso mucho más fácil. El rango seguro es −15 % a −20 % de tu TDEE.'
+                  : 'El músculo solo puede crecer ~0.5 kg/mes en condiciones ideales. Si las calorías llegan más rápido de lo que el músculo puede procesarlas, el exceso va directo a grasa. Reduce el superávit a +5–10 % para un bulk más limpio.'
               }
             />
           )}
           {result.warnings.includes('superavit_agresivo') && (
             <WarningBanner
-              msg="Superávit elevado — mayor acumulación de grasa"
-              detail="El cuerpo solo sintetiza ~0.5 kg de músculo/mes. Con superávit alto, la mayor parte del peso ganado será grasa. Para un lean bulk eficiente apunta a +5–10%."
+              severity="warn"
+              title="Superávit alto — más grasa que músculo"
+              consequence="→ ganarás ~3 partes de grasa por cada parte de músculo"
+              detail="El músculo solo puede sintetizarse a ~0.5 kg/mes en condiciones ideales. Todo lo que el músculo no puede procesar se convierte directamente en tejido graso. Con un superávit mayor al 20 % terminarás el bulk más gordo que musculoso y deberás hacer un corte largo para recuperar la definición. Para ganar músculo eficientemente apunta a +5–10 % de tu TDEE (lean bulk)."
             />
           )}
         </div>
@@ -682,19 +692,53 @@ function ResultStep({
 
 // ─── WarningBanner ────────────────────────────────────────────────────────────
 
-function WarningBanner({ msg, detail }: { msg: string; detail: string }) {
+function WarningBanner({
+  severity,
+  title,
+  consequence,
+  detail,
+}: {
+  severity: 'warn' | 'danger';
+  title: string;
+  consequence: string;
+  detail: string;
+}) {
   const [open, setOpen] = useState(false);
+  const borderColor  = severity === 'danger' ? '#E24B4A' : '#EF9F27';
+  const labelColor   = severity === 'danger' ? '#E24B4A' : '#EF9F27';
+  const bgClass      = severity === 'danger' ? 'bg-[#E24B4A]/10 border-[#E24B4A]/40' : 'bg-[#EF9F27]/10 border-[#EF9F27]/40';
+  const tagBg        = severity === 'danger' ? 'bg-[#E24B4A]/20 text-[#E24B4A]' : 'bg-[#EF9F27]/20 text-[#EF9F27]';
+  void borderColor;
+
   return (
-    <div className="rounded-lg border border-[#EF9F27]/40 bg-[#EF9F27]/10 px-3 py-2 text-sm">
+    <div className={`rounded-lg border px-3 py-2.5 text-sm ${bgClass}`}>
+      {/* Header — always visible */}
+      <div className="flex items-start gap-2">
+        <span className="mt-px shrink-0 text-base leading-none" style={{ color: labelColor }}>
+          {severity === 'danger' ? '🚨' : '⚠️'}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold leading-tight" style={{ color: labelColor }}>{title}</p>
+          {/* Consequence pill — always visible */}
+          <p className={`inline-block mt-1 rounded-full px-2 py-0.5 text-xs font-medium ${tagBg}`}>
+            {consequence}
+          </p>
+        </div>
+      </div>
+      {/* Expandable explanation */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center justify-between w-full gap-2 text-left"
+        className="mt-2 text-xs underline underline-offset-2 transition-opacity opacity-60 hover:opacity-100"
+        style={{ color: labelColor }}
       >
-        <span className="font-medium text-[#EF9F27]">⚠ {msg}</span>
-        <span className="text-[#EF9F27] opacity-60 text-xs shrink-0">{open ? '▲' : '▼'}</span>
+        {open ? 'Ocultar explicación ▲' : 'Entender por qué ▼'}
       </button>
-      {open && <p className="mt-2 text-xs text-muted leading-relaxed">{detail}</p>}
+      {open && (
+        <p className="mt-2 text-xs text-muted leading-relaxed border-t border-current/10 pt-2">
+          {detail}
+        </p>
+      )}
     </div>
   );
 }
