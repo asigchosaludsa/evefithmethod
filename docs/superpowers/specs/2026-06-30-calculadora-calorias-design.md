@@ -140,11 +140,15 @@ Actualizado por: Ainsworth BE et al. *Compendium of Physical Activities.* Med Sc
 
 ### Macros
 
-- **Proteína:** 2.0 g/kg (rango ISSN: 1.6–2.2 g/kg; se usa 2.0 por defecto en déficit/mantenimiento)
-- **Grasa:** 0.9 g/kg (rango: 0.8–1.0 g/kg; mínimo hormonal)
-- **Carbohidratos:** (kcal_objetivo − proteína_kcal − grasa_kcal) ÷ 4
+- **Proteína:** 2.0 g/kg por defecto, **ajustable** en rango 1.6–2.2 g/kg (ISSN)
+- **Grasa:** 0.9 g/kg por defecto, **ajustable** en rango 0.8–1.0 g/kg (mínimo hormonal)
+- **Carbohidratos:** (kcal_objetivo − proteína_kcal − grasa_kcal) ÷ 4 — residual, sin multiplicador
 - Fuente: Stokes T et al. *Recent Perspectives Regarding the Role of Dietary Protein for the
   Promotion of Muscle Hypertrophy.* Nutrients. 2018;10(2):180.
+
+> **Nota rango proteína:** La OMS recomienda 0.8 g/kg para población sedentaria; 1.2 g/kg para
+> salud general. Para fitness/entrenamiento el rango sube a 1.6–2.2 g/kg (ISSN). Como las alumnas
+> de EveFit entrenan, el default es 2.0 g/kg (extremo alto en déficit para retener músculo).
 
 ---
 
@@ -176,6 +180,11 @@ El diseño sigue el sistema "Acero & Escarlata" (B3 dark).
   - Superávit → teal `#1D9E75` + `ti-trending-up` (bounce hacia arriba)
 - Tarjetas TMB y GET
 - Barras de macros animadas
+- **ⓘ junto a cada macro** (proteína, carbs, grasa): clic abre panel inline con:
+  - Fórmula exacta usada (`2.0 g × 62 kg = 124 g`)
+  - Fuente/rango recomendado
+  - **Slider de multiplicador** (solo proteína 1.6–2.2 y grasa 0.8–1.0; carbs es residual)
+  - Al mover el slider, macros y calorías se recalculan en vivo
 - Acordeón **"¿Por qué este número?"** con fórmula, desglose y fuente citada
 - Banner de aviso (no bloqueante) si hay alerta de seguridad
 - Botón **"Asignar a [nombre]"** (oculto en modo anónimo) → toast de confirmación
