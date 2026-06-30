@@ -103,6 +103,17 @@ describe('safetyCheck', () => {
     const w = safetyCheck({ target_kcal: 1600, sex: 'female', weight_kg: 62, kg_per_week: -0.34 });
     expect(w).toHaveLength(0);
   });
+
+  it('warns superavit_agresivo when adjustment_pct > 20%', () => {
+    const w = safetyCheck({ target_kcal: 2500, sex: 'female', weight_kg: 60, kg_per_week: 0.45, adjustment_pct: 25 });
+    expect(w).toContain('superavit_agresivo');
+  });
+
+  it('warns superavit_agresivo when gain rate > 0.7% body weight/week', () => {
+    // 0.7% of 70 kg = 0.49 kg/week threshold; 0.55 exceeds it
+    const w = safetyCheck({ target_kcal: 2800, sex: 'male', weight_kg: 70, kg_per_week: 0.55 });
+    expect(w).toContain('superavit_agresivo');
+  });
 });
 
 describe('calculateEnergy (integration)', () => {

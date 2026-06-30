@@ -10,7 +10,7 @@ export const energyInputSchema = z.object({
   adjustment_pct: z.coerce
     .number()
     .min(-25, 'Máximo déficit −25%')
-    .max(15, 'Máximo superávit +15%'),
+    .max(30, 'Máximo superávit +30%'),
   protein_multiplier: z.coerce.number().min(1.6).max(2.2).default(2.0),
   fat_multiplier: z.coerce.number().min(0.8).max(1.0).default(0.9),
   student_id: z.string().uuid().optional(),

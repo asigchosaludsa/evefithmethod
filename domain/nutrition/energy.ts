@@ -2,7 +2,7 @@ export type Sex = 'female' | 'male';
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 
-export type EnergyWarning = 'bajo_piso' | 'ritmo_agresivo';
+export type EnergyWarning = 'bajo_piso' | 'ritmo_agresivo' | 'superavit_agresivo';
 
 export interface BMRParams {
   sex: Sex;
@@ -102,12 +102,18 @@ export function safetyCheck(params: {
   sex: Sex;
   weight_kg: number;
   kg_per_week: number;
+  adjustment_pct?: number;
 }): EnergyWarning[] {
-  const { target_kcal, sex, weight_kg, kg_per_week } = params;
+  const { target_kcal, sex, weight_kg, kg_per_week, adjustment_pct } = params;
   const warnings: EnergyWarning[] = [];
   const floor = sex === 'female' ? FLOOR_FEMALE : FLOOR_MALE;
   if (target_kcal < floor) warnings.push('bajo_piso');
   if (Math.abs(kg_per_week) > weight_kg * MAX_RATE_FRACTION) warnings.push('ritmo_agresivo');
+  // Aggressive surplus: adjustment > 20% or gain rate > 0.7% body weight / week
+  if ((adjustment_pct !== undefined && adjustment_pct > 20) ||
+      (kg_per_week > weight_kg * 0.007)) {
+    warnings.push('superavit_agresivo');
+  }
   return warnings;
 }
 
@@ -127,6 +133,7 @@ export function calculateEnergy(input: EnergyInput): EnergyResult {
     sex: input.sex,
     weight_kg: input.weight_kg,
     kg_per_week,
+    adjustment_pct: input.adjustment_pct,
   });
   return {
     ...bmrResult,
