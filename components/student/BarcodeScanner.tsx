@@ -3,10 +3,9 @@
 import * as React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Barcode, Loader2, X } from 'lucide-react';
+import type { IScannerControls } from '@zxing/browser';
 import { Button, FormField, Input } from '@/components/common';
 import { cn } from '@/lib/utils/cn';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -18,14 +17,11 @@ interface BarcodeScannerProps {
   error?: string | null;
 }
 
-function hasBarcodeDetector(): boolean {
-  return typeof window !== 'undefined' && 'BarcodeDetector' in window;
-}
-
 /**
- * Cuerpo del escáner. Vive dentro de Dialog.Content (Radix lo monta/desmonta al
- * abrir/cerrar), así la cámara se enciende al abrir y se apaga al cerrar sin
- * necesidad de un branch de reset en el efecto.
+ * Cuerpo del escáner. Usa @zxing/browser (decodifica en JS desde la cámara), que
+ * funciona en iOS Safari, Firefox y Android — no depende de la API nativa
+ * BarcodeDetector. Vive dentro de Dialog.Content: Radix lo monta al abrir y lo
+ * desmonta al cerrar, así la cámara se enciende/apaga sin lógica de reset.
  */
 function ScannerBody({
   onDetected,
@@ -37,79 +33,79 @@ function ScannerBody({
   error?: string | null;
 }) {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
-  const streamRef = React.useRef<MediaStream | null>(null);
-  const rafRef = React.useRef<number | null>(null);
+  const controlsRef = React.useRef<IScannerControls | null>(null);
   const firedRef = React.useRef(false);
   const [manual, setManual] = React.useState('');
   const [camError, setCamError] = React.useState<string | null>(null);
-  const supported = hasBarcodeDetector();
+  const [starting, setStarting] = React.useState(true);
 
   React.useEffect(() => {
-    if (!supported) return;
     let cancelled = false;
-    const detector = new (window as any).BarcodeDetector({
-      formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'],
-    });
 
     (async () => {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        if (!cancelled) {
+          setStarting(false);
+          setCamError('Tu navegador no permite la cámara. Ingresa el código a mano.');
+        }
+        return;
+      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        if (cancelled || !videoRef.current) return;
+        const reader = new BrowserMultiFormatReader();
+        const controls = await reader.decodeFromConstraints(
+          { video: { facingMode: 'environment' } },
+          videoRef.current,
+          (result) => {
+            if (cancelled || firedRef.current || !result) return;
+            firedRef.current = true;
+            onDetected(result.getText());
+            controlsRef.current?.stop();
+          },
+        );
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          controls.stop();
           return;
         }
-        streamRef.current = stream;
-        const video = videoRef.current;
-        if (!video) return;
-        video.srcObject = stream;
-        await video.play();
-
-        const tick = async () => {
-          if (cancelled || firedRef.current || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            const value = codes?.[0]?.rawValue;
-            if (value) {
-              firedRef.current = true;
-              onDetected(String(value));
-              return;
-            }
-          } catch {
-            /* frame sin código, seguir */
-          }
-          rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
+        controlsRef.current = controls;
+        setStarting(false);
       } catch {
-        if (!cancelled) setCamError('No pudimos abrir la cámara. Ingresa el código manualmente.');
+        if (!cancelled) {
+          setStarting(false);
+          setCamError('No pudimos abrir la cámara (permiso denegado o no disponible). Ingresa el código a mano.');
+        }
       }
     })();
 
     return () => {
       cancelled = true;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      controlsRef.current?.stop();
+      controlsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supported]);
+  }, []);
 
   return (
     <>
-      {supported ? (
-        <div className="mt-4 space-y-2">
-          <div className="relative overflow-hidden rounded-lg border border-border bg-black">
-            <video ref={videoRef} className="h-56 w-full object-cover" muted playsInline />
+      <div className="mt-4 space-y-2">
+        <div className="relative overflow-hidden rounded-lg border border-border bg-black">
+          <video ref={videoRef} className="h-56 w-full object-cover" muted playsInline />
+          {starting && !camError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white">
+              <Loader2 className="mr-2 size-4 animate-spin" /> Abriendo cámara…
+            </div>
+          )}
+          {!camError && (
             <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 -translate-y-1/2 bg-primary/80" />
-          </div>
-          <p className="text-xs text-muted">Apunta al código de barras del producto.</p>
-          {camError && <p className="text-xs text-warning">{camError}</p>}
+          )}
         </div>
-      ) : (
-        <p className="mt-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground">
-          Tu dispositivo no permite escanear con la cámara. Ingresa el código de barras a mano.
-        </p>
-      )}
+        {camError ? (
+          <p className="text-xs text-warning">{camError}</p>
+        ) : (
+          <p className="text-xs text-muted">Apunta al código de barras del producto.</p>
+        )}
+      </div>
 
       <div className="mt-4">
         <FormField label="O ingresa el código" htmlFor="bc_manual">

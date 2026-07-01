@@ -17,7 +17,7 @@ const csp = [
   `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://*.supabase.co",
-  "media-src 'self' https://*.supabase.co",
+  "media-src 'self' blob: mediastream: https://*.supabase.co",
   "font-src 'self' data:",
   "frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
@@ -41,7 +41,8 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=()",
+            // Cámara permitida solo para el propio origen (escaneo de código de barras).
+            value: "camera=(self), microphone=(), geolocation=(), payment=()",
           },
         ],
       },
