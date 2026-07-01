@@ -51,11 +51,34 @@ function ScannerBody({
         return;
       }
       try {
-        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        const [{ BrowserMultiFormatReader }, { DecodeHintType, BarcodeFormat }] = await Promise.all([
+          import('@zxing/browser'),
+          import('@zxing/library'),
+        ]);
         if (cancelled || !videoRef.current) return;
-        const reader = new BrowserMultiFormatReader();
+
+        // Restringir a formatos de retail + TRY_HARDER mejora mucho la detección
+        // de EAN/UPC en móviles (si no, el lector genérico casi nunca engancha).
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.ITF,
+        ]);
+        hints.set(DecodeHintType.TRY_HARDER, true);
+
+        const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 120 });
         const controls = await reader.decodeFromConstraints(
-          { video: { facingMode: 'environment' } },
+          {
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+          },
           videoRef.current,
           (result) => {
             if (cancelled || firedRef.current || !result) return;
@@ -88,22 +111,30 @@ function ScannerBody({
 
   return (
     <>
+      <style>{`@keyframes efmScanLine{0%,100%{top:20%}50%{top:80%}}`}</style>
       <div className="mt-4 space-y-2">
         <div className="relative overflow-hidden rounded-lg border border-border bg-black">
-          <video ref={videoRef} className="h-56 w-full object-cover" muted playsInline />
+          <video ref={videoRef} className="h-64 w-full object-cover" muted playsInline />
           {starting && !camError && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white">
               <Loader2 className="mr-2 size-4 animate-spin" /> Abriendo cámara…
             </div>
           )}
-          {!camError && (
-            <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 -translate-y-1/2 bg-primary/80" />
+          {!camError && !starting && (
+            <>
+              {/* Marco guía + línea de escaneo animada. */}
+              <div className="pointer-events-none absolute inset-x-6 inset-y-10 rounded-lg border-2 border-white/50" />
+              <div
+                className="pointer-events-none absolute inset-x-8 h-0.5 bg-primary shadow-[0_0_10px_2px_rgba(255,59,71,0.8)]"
+                style={{ animation: 'efmScanLine 2.2s ease-in-out infinite' }}
+              />
+            </>
           )}
         </div>
         {camError ? (
           <p className="text-xs text-warning">{camError}</p>
         ) : (
-          <p className="text-xs text-muted">Apunta al código de barras del producto.</p>
+          <p className="text-xs text-muted">Centra el código de barras dentro del marco, con buena luz.</p>
         )}
       </div>
 
