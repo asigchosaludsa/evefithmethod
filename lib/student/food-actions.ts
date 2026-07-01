@@ -147,3 +147,34 @@ export async function updateCustomFood(
   revalidatePath('/student/meals/new');
   return { food: data };
 }
+
+/**
+ * Elimina un alimento personalizado propio (source='custom'). Los registros
+ * pasados no se rompen: `food_log_items.food_item_id` es ON DELETE SET NULL, así
+ * que las comidas ya guardadas conservan sus macros (solo pierden el enlace al
+ * nombre). No permite borrar alimentos públicos ni de Open Food Facts.
+ */
+export async function deleteCustomFood(foodId: string): Promise<{ ok?: true; error?: string }> {
+  const student = await requireStudent();
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from('food_items')
+    .select('id, source, created_by')
+    .eq('id', foodId)
+    .maybeSingle();
+  if (!existing) return { error: 'No se encontró el alimento.' };
+  if (existing.created_by !== student.id || existing.source !== 'custom') {
+    return { error: 'Solo puedes eliminar los alimentos que tú creaste.' };
+  }
+
+  const { error } = await supabase
+    .from('food_items')
+    .delete()
+    .eq('id', foodId)
+    .eq('created_by', student.id);
+  if (error) return { error: error.message };
+
+  revalidatePath('/student/meals/new');
+  return { ok: true };
+}

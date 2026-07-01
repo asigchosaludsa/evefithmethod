@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
 import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/calculations';
 import { toGrams, availableUnits, type FoodUnit } from '@/domain/nutrition/units';
-import { Button, FormField, Input, Select, Textarea } from '@/components/common';
+import { Button, ConfirmDialog, FormField, Input, Select, Textarea } from '@/components/common';
 import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
 import { BarcodeScanner } from '@/components/student/BarcodeScanner';
 import { MacroLine, MacroLegend } from '@/components/nutrition/MacroLine';
@@ -18,7 +18,7 @@ import {
   lookupOpenFoodFactsBarcode,
   type OffProduct,
 } from '@/lib/nutrition/openfoodfacts';
-import type { NewFood } from '@/lib/student/food-actions';
+import { deleteCustomFood, type NewFood } from '@/lib/student/food-actions';
 import type { MealType } from '@/types/app';
 
 export interface FoodOption {
@@ -228,6 +228,17 @@ export function FoodLogForm({
     setEditFood(null);
   }
 
+  // Elimina un alimento propio: lo quita del catálogo y de las líneas actuales.
+  async function handleDeleteFood(foodId: string) {
+    const res = await deleteCustomFood(foodId);
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    setFoods((fs) => fs.filter((f) => f.id !== foodId));
+    setLines((ls) => ls.filter((l) => l.foodItemId !== foodId));
+  }
+
   // Resuelve un código de barras vía Open Food Facts y lo agrega como línea.
   function handleBarcode(code: string) {
     if (scanBusy) return;
@@ -348,15 +359,34 @@ export function FoodLogForm({
                           <span className="tabular ml-2 shrink-0 text-xs text-faint">{f.calories_per_100g} kcal/100g</span>
                         </button>
                         {editable && (
-                          <button
-                            type="button"
-                            onClick={() => setEditFood(f)}
-                            className="shrink-0 px-2.5 py-2 text-faint hover:text-primary"
-                            aria-label={`Editar ${f.name}`}
-                            title="Editar alimento"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditFood(f)}
+                              className="shrink-0 px-2 py-2 text-faint hover:text-primary"
+                              aria-label={`Editar ${f.name}`}
+                              title="Editar alimento"
+                            >
+                              <Pencil className="size-3.5" />
+                            </button>
+                            <ConfirmDialog
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="shrink-0 px-2 py-2 text-faint hover:text-danger"
+                                  aria-label={`Eliminar ${f.name}`}
+                                  title="Eliminar alimento"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              }
+                              title="Eliminar alimento"
+                              description={`¿Eliminar "${f.name}" de tus alimentos? Tus registros anteriores conservan sus datos.`}
+                              confirmLabel="Eliminar"
+                              destructive
+                              onConfirm={() => handleDeleteFood(f.id)}
+                            />
+                          </>
                         )}
                       </li>
                     );
