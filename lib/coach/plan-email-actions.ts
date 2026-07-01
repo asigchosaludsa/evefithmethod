@@ -54,8 +54,10 @@ export async function sendPlanEmail(
     const workout: PlanPdfInput['workout'] = workoutContent
       ? {
           title: workoutContent.plan.title,
+          weeks: workoutContent.plan.weeks,
           days: workoutContent.days.map((d) => ({
             title: d.title,
+            weekday: d.weekday,
             exercises: d.exercises.map((ex) => ({
               name: ex.exercise_name,
               sets: ex.sets,

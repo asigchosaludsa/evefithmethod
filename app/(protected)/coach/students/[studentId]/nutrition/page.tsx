@@ -12,28 +12,50 @@ import { calculateMacroProgress } from '@/domain/nutrition/calculations';
 import { formatDate, todayISO } from '@/lib/utils/date';
 import { NutritionCalendar } from '@/components/nutrition/NutritionCalendar';
 import { NutritionAdherenceChart, type AdherencePoint } from '@/components/nutrition/NutritionAdherenceChart';
+import { CoachNutritionDayNav } from '@/components/coach/CoachNutritionDayNav';
 import { addDaysISO } from '@/domain/workouts/calendar';
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const MONTHS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+function humanDay(dateISO: string, todayStr: string): string {
+  if (dateISO === todayStr) return 'hoy';
+  const [y, m, d] = dateISO.split('-').map(Number);
+  return `${d} de ${MONTHS[(m ?? 1) - 1] ?? ''} de ${y}`;
+}
 
 export default async function StudentNutritionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ studentId: string }>;
+  searchParams: Promise<{ date?: string }>;
 }) {
   const { studentId } = await params;
+  const { date } = await searchParams;
   const coach = await requireCoach();
   await assertCoachOwnsStudent(coach.id, studentId);
+
+  const today = todayISO();
+  // Día seleccionado: válido y no futuro; por defecto hoy.
+  const selectedISO = date && ISO_DATE.test(date) && date <= today ? date : today;
 
   const supabase = await createClient();
   const [{ data: plans }, day] = await Promise.all([
     supabase.from('nutrition_plans').select('*').eq('student_id', studentId).order('created_at', { ascending: false }),
-    getStudentNutritionDay(studentId, todayISO()),
+    getStudentNutritionDay(studentId, selectedISO),
   ]);
   const calProgress = calculateMacroProgress(day.consumed.calories, day.target.calories ?? 0);
   const activePlans = (plans ?? []).filter((p) => p.status !== 'archived');
   const archivedPlans = (plans ?? []).filter((p) => p.status === 'archived');
 
-  const endISO = todayISO();
-  const startISO = addDaysISO(endISO, -27);
+  const endISO = today;
+  // Rango del calendario: ~8 semanas atrás (o hasta el día seleccionado si es más antiguo).
+  const startISO = selectedISO < addDaysISO(endISO, -55) ? selectedISO : addDaysISO(endISO, -55);
   const range = await getStudentNutritionRange(studentId, startISO, endISO);
   const points: AdherencePoint[] = [];
   for (let d = startISO; d <= endISO; d = addDaysISO(d, 1)) {
@@ -48,8 +70,9 @@ export default async function StudentNutritionPage({
       <PageHeader title="Nutrición" description="Planes y registros de comida de la alumna." />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Registros de comida (hoy)</CardTitle>
+        <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle>Registros de comida — <span className="capitalize">{humanDay(selectedISO, today)}</span></CardTitle>
+          <CoachNutritionDayNav selectedISO={selectedISO} todayISO={today} />
         </CardHeader>
         <CardBody className="space-y-4">
           <div className="space-y-2">
@@ -88,6 +111,7 @@ export default async function StudentNutritionPage({
             byDate={range.byDate}
             target={{ calories: range.target.calories }}
             todayISO={endISO}
+            hrefFor={(iso) => `/coach/students/${studentId}/nutrition?date=${iso}`}
           />
           <NutritionAdherenceChart points={points} target={range.target.calories} />
         </CardBody>

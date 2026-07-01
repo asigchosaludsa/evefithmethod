@@ -27,6 +27,7 @@ export interface PlanDay {
   day_number: number;
   title: string;
   focus: string | null;
+  weekday: number | null;
   exercises: PlanExerciseRow[];
 }
 
@@ -98,6 +99,7 @@ export async function getWorkoutPlanContent(planId: string): Promise<WorkoutPlan
       day_number: d.day_number,
       title: d.title,
       focus: d.focus,
+      weekday: d.weekday ?? null,
       exercises: byDay.get(d.id) ?? [],
     })),
   };

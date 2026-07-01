@@ -17,6 +17,7 @@ import {
 import { MacroProgress } from '@/components/student/MacroProgress';
 import { MacroRescuePanel } from '@/components/student/MacroRescuePanel';
 import { CoachTipCard } from '@/components/student/CoachTipCard';
+import { CoachNotesCard } from '@/components/student/CoachNotesCard';
 import { SessionCompleteCard, type SessionExerciseLine } from '@/components/workouts/SessionCompleteCard';
 
 export const metadata = { title: 'Hoy' };
@@ -128,6 +129,27 @@ export default async function StudentTodayPage() {
         ? 'text-success'
         : 'text-muted';
 
+  // Avisos suaves del día para la alumna (se calculan con los datos ya cargados).
+  const nudges: { key: string; icon: typeof Utensils; text: string; href: string; cta: string }[] = [];
+  if (!today.loggedFoodToday) {
+    nudges.push({
+      key: 'food',
+      icon: Utensils,
+      text: 'Aún no registras ninguna comida hoy.',
+      href: `/student/meals/new?date=${todayISO}`,
+      cta: 'Registrar',
+    });
+  }
+  if (calendar.plan && todayPlanDay && !todayDone) {
+    nudges.push({
+      key: 'workout',
+      icon: Dumbbell,
+      text: 'Tienes tu entrenamiento de hoy pendiente.',
+      href: '/student/workout',
+      cta: 'Ver',
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div className="efm-fade-up" style={{ ['--efm-step' as string]: 0 }}>
@@ -144,6 +166,29 @@ export default async function StudentTodayPage() {
           }
         />
       </div>
+
+      {/* Avisos del día. */}
+      {nudges.length > 0 && (
+        <div className="space-y-2">
+          {nudges.map((n) => {
+            const Icon = n.icon;
+            return (
+              <div
+                key={n.key}
+                className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5"
+              >
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <Icon className="size-4 shrink-0 text-warning" aria-hidden />
+                  <span>{n.text}</span>
+                </div>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href={n.href}>{n.cta}</Link>
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Hero "resumen de hoy": entreno · nutrición · peso. */}
       <div className="grid gap-3 sm:grid-cols-3">
@@ -177,6 +222,13 @@ export default async function StudentTodayPage() {
           );
         })}
       </div>
+
+      {/* Notas de la coach visibles para la alumna. */}
+      {today.coachNotes.length > 0 && (
+        <div className="efm-fade-up" style={{ ['--efm-step' as string]: 4 }}>
+          <CoachNotesCard notes={today.coachNotes} />
+        </div>
+      )}
 
       {/* Fila de 2 columnas: entrenamiento de hoy · tip de la coach. */}
       <div className="grid gap-4 lg:grid-cols-2">

@@ -70,6 +70,7 @@ export default async function EditMealPage({ params }: { params: Promise<{ logId
           initialMealType={initialMealType}
           initialNotes={log.notes ?? ''}
           initialLines={initialLines}
+          initialDate={log.logged_at.slice(0, 10)}
         />
       </Card>
     </div>

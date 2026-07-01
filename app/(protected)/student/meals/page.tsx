@@ -57,7 +57,7 @@ export default async function StudentMealsPage({
         description="Revisa cualquier día y gestiona tus registros."
         actions={
           <Button asChild>
-            <Link href="/student/meals/new">
+            <Link href={`/student/meals/new?date=${selectedISO}`}>
               <Plus className="size-4" /> Registrar comida
             </Link>
           </Button>
@@ -79,15 +79,14 @@ export default async function StudentMealsPage({
         </CardHeader>
         <CardBody>
           <MealDayDetail day={day} />
-          {isToday && (
-            <div className="mt-4">
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/student/meals/new">
-                  <Plus className="size-4" /> Registrar otra comida
-                </Link>
-              </Button>
-            </div>
-          )}
+          <div className="mt-4">
+            <Button asChild variant="outline" className="w-full">
+              <Link href={`/student/meals/new?date=${selectedISO}`}>
+                <Plus className="size-4" />
+                {isToday ? 'Registrar otra comida' : `Registrar comida del ${formatHumanDay(selectedISO)}`}
+              </Link>
+            </Button>
+          </div>
         </CardBody>
       </Card>
     </div>

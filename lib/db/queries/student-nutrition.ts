@@ -234,6 +234,7 @@ export async function getStudentMealsForDay(
 export interface FoodLogForEdit {
   id: string;
   meal_type: string;
+  logged_at: string;
   notes: string | null;
   lines: {
     foodItemId: string;
@@ -258,7 +259,7 @@ export async function getStudentFoodLogForEdit(
 
   const { data: log } = await supabase
     .from('food_logs')
-    .select('id, meal_type, notes')
+    .select('id, meal_type, logged_at, notes')
     .eq('id', logId)
     .eq('student_id', studentId)
     .maybeSingle();
@@ -314,7 +315,7 @@ export async function getStudentFoodLogForEdit(
     });
   }
 
-  return { id: log.id, meal_type: log.meal_type, notes: log.notes, lines };
+  return { id: log.id, meal_type: log.meal_type, logged_at: log.logged_at, notes: log.notes, lines };
 }
 
 export interface NutritionDayTotals {

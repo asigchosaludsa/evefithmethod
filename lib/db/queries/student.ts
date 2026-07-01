@@ -47,19 +47,34 @@ export async function getConsumedMacros(studentId: string, date = todayISO()): P
   );
 }
 
+export interface CoachNoteForStudent {
+  id: string;
+  note: string;
+  created_at: string;
+}
+
 export interface StudentToday {
   activeNutritionPlan: NutritionPlan | null;
   activeWorkoutPlan: WorkoutPlan | null;
   consumed: Macros;
   lastWeightKg: number | null;
   assignedTip: { id: string; postId: string; title: string; summary: string | null } | null;
+  coachNotes: CoachNoteForStudent[];
+  loggedFoodToday: boolean;
 }
 
 export async function getStudentToday(studentId: string): Promise<StudentToday> {
   const supabase = await createClient();
 
-  const [{ data: nutritionPlan }, { data: workoutPlan }, consumed, { data: weight }, { data: assignments }] =
-    await Promise.all([
+  const [
+    { data: nutritionPlan },
+    { data: workoutPlan },
+    consumed,
+    { data: weight },
+    { data: assignments },
+    { data: notes },
+    { data: todayLogs },
+  ] = await Promise.all([
       supabase
         .from('nutrition_plans')
         .select('*')
@@ -90,6 +105,22 @@ export async function getStudentToday(studentId: string): Promise<StudentToday> 
         .eq('student_id', studentId)
         .order('assigned_at', { ascending: false })
         .limit(5),
+      // Notas del coach marcadas como visibles para la alumna (is_private=false).
+      supabase
+        .from('coach_notes')
+        .select('id, note, created_at')
+        .eq('student_id', studentId)
+        .eq('is_private', false)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      // ¿Registró alguna comida hoy? (para el aviso "sin comida hoy").
+      supabase
+        .from('food_logs')
+        .select('id')
+        .eq('student_id', studentId)
+        .gte('logged_at', `${todayISO()}T00:00:00`)
+        .lte('logged_at', `${todayISO()}T23:59:59`)
+        .limit(1),
     ]);
 
   // Resolve the first assigned tip whose post is published.
@@ -117,5 +148,7 @@ export async function getStudentToday(studentId: string): Promise<StudentToday> 
     consumed,
     lastWeightKg: weight?.weight_kg ?? null,
     assignedTip,
+    coachNotes: (notes ?? []).map((n) => ({ id: n.id, note: n.note, created_at: n.created_at })),
+    loggedFoodToday: (todayLogs ?? []).length > 0,
   };
 }

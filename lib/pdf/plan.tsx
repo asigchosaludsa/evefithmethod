@@ -7,6 +7,7 @@ import {
   StyleSheet,
   renderToBuffer,
 } from '@react-pdf/renderer';
+import { WEEKDAYS } from '@/domain/workouts/calendar';
 
 /** Health disclaimer shown in the footer (matches the CLAUDE.md exact text). */
 const DISCLAIMER =
@@ -72,6 +73,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     fontSize: 12,
     marginBottom: 8,
+  },
+  scheduleText: {
+    color: MUTED,
+    fontSize: 9.5,
+    marginBottom: 10,
   },
   macroRow: {
     flexDirection: 'row',
@@ -162,8 +168,10 @@ export interface PlanPdfInput {
   } | null;
   workout: {
     title?: string;
+    weeks?: number | null;
     days: {
       title: string;
+      weekday?: number | null;
       exercises: {
         name: string;
         sets?: number | null;
@@ -172,6 +180,25 @@ export interface PlanPdfInput {
       }[];
     }[];
   } | null;
+}
+
+function weekdayLabel(weekday: number | null | undefined): string | null {
+  if (weekday === null || weekday === undefined) return null;
+  return WEEKDAYS.find((w) => w.value === weekday)?.label ?? null;
+}
+
+/** Resumen de programación: "3 días/sem · Lun, Mié, Vie · descanso: Mar, Jue, Sáb, Dom". */
+function scheduleSummary(days: PlanPdfInput['workout'] extends null ? never : { weekday?: number | null }[]): string {
+  const assigned = days
+    .map((d) => d.weekday)
+    .filter((w): w is number => w !== null && w !== undefined);
+  if (assigned.length === 0) return '';
+  const uniqueSorted = [...new Set(assigned)].sort((a, b) => a - b);
+  const trainingLabels = uniqueSorted.map((w) => WEEKDAYS.find((x) => x.value === w)?.short ?? '').filter(Boolean);
+  const restLabels = WEEKDAYS.filter((w) => !uniqueSorted.includes(w.value)).map((w) => w.short);
+  const parts = [`${trainingLabels.length} dias/sem`, trainingLabels.join(', ')];
+  if (restLabels.length > 0) parts.push(`descanso: ${restLabels.join(', ')}`);
+  return parts.join('  ·  ');
 }
 
 function macroText(value: number | null | undefined, unit: string): string {
@@ -252,9 +279,20 @@ function PlanDocument({ input }: { input: PlanPdfInput }) {
           {workout && workout.days.length > 0 ? (
             <View>
               {workout.title ? <Text style={styles.planTitle}>{workout.title}</Text> : null}
-              {workout.days.map((d, di) => (
+              {(() => {
+                const durationText =
+                  workout.weeks && workout.weeks > 0
+                    ? `Duracion: ${workout.weeks} ${workout.weeks === 1 ? 'semana' : 'semanas'}`
+                    : '';
+                const sched = scheduleSummary(workout.days);
+                const line = [durationText, sched].filter(Boolean).join('  ·  ');
+                return line ? <Text style={styles.scheduleText}>{line}</Text> : null;
+              })()}
+              {workout.days.map((d, di) => {
+                const wl = weekdayLabel(d.weekday);
+                return (
                 <View key={di} style={styles.day} wrap={false}>
-                  <Text style={styles.dayTitle}>{d.title}</Text>
+                  <Text style={styles.dayTitle}>{wl ? `${wl} · ${d.title}` : d.title}</Text>
                   {d.exercises.length > 0 ? (
                     d.exercises.map((ex, ei) => (
                       <View key={ei} style={styles.exerciseRow}>
@@ -266,7 +304,8 @@ function PlanDocument({ input }: { input: PlanPdfInput }) {
                     <Text style={styles.empty}>Sin ejercicios.</Text>
                   )}
                 </View>
-              ))}
+                );
+              })}
             </View>
           ) : (
             <Text style={styles.empty}>Sin plan de entrenamiento asignado todavia.</Text>

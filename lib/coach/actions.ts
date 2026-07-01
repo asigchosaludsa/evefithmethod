@@ -30,16 +30,21 @@ export async function addCoachNote(_prev: ActionState, formData: FormData): Prom
   if (!parsed.success) return { error: firstError(parsed.error.issues) };
   await assertCoachOwnsStudent(coach.id, parsed.data.student_id);
 
+  // Checkbox: si está marcado, la nota es visible para la alumna (is_private=false).
+  const visibleToStudent = formData.get('visible_to_student') === 'on';
+
   const supabase = await createClient();
   const { error } = await supabase.from('coach_notes').insert({
     coach_id: coach.id,
     student_id: parsed.data.student_id,
     note: parsed.data.note,
     category: parsed.data.category ?? null,
+    is_private: !visibleToStudent,
   });
   if (error) return { error: error.message };
   revalidatePath(`/coach/students/${parsed.data.student_id}`);
-  return { success: 'Nota guardada' };
+  revalidatePath('/student/today');
+  return { success: visibleToStudent ? 'Nota guardada y visible para la alumna' : 'Nota privada guardada' };
 }
 
 export async function deleteCoachNote(noteId: string, studentId: string): Promise<void> {
@@ -426,11 +431,19 @@ export async function updateCoachSettings(_prev: ActionState, formData: FormData
 }
 
 // ---- Workout plan builder (days + exercises) ----
+/** Parsea un weekday (1-7) desde un valor de formulario; null si vacío/ inválido. */
+function parseWeekday(raw: FormDataEntryValue | null): number | null {
+  if (raw === null || String(raw).trim() === '') return null;
+  const wd = Number(raw);
+  return Number.isInteger(wd) && wd >= 1 && wd <= 7 ? wd : null;
+}
+
 export async function addWorkoutDay(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const coach = await requireCoach();
   const planId = String(formData.get('workout_plan_id') ?? '');
   const title = String(formData.get('title') ?? '').trim();
   const focus = String(formData.get('focus') ?? '').trim() || null;
+  const weekday = parseWeekday(formData.get('weekday'));
   if (!planId || title.length < 1) return { error: 'Escribe el título del día' };
 
   const supabase = await createClient();
@@ -451,10 +464,30 @@ export async function addWorkoutDay(_prev: ActionState, formData: FormData): Pro
 
   const { error } = await supabase
     .from('workout_plan_days')
-    .insert({ workout_plan_id: planId, day_number: nextNumber, title, focus });
+    .insert({ workout_plan_id: planId, day_number: nextNumber, title, focus, weekday });
   if (error) return { error: error.message };
   revalidatePath(`/coach/workouts/plans/${planId}`);
   return { success: 'Día agregado' };
+}
+
+/** Reasigna el día de la semana de un día del plan (o lo deja como descanso: null). */
+export async function updateWorkoutDayWeekday(dayId: string, planId: string, weekdayRaw: string): Promise<void> {
+  const coach = await requireCoach();
+  const supabase = await createClient();
+  const { data: plan } = await supabase
+    .from('workout_plans')
+    .select('coach_id')
+    .eq('id', planId)
+    .maybeSingle();
+  if (!plan || plan.coach_id !== coach.id) return;
+
+  const weekday = parseWeekday(weekdayRaw);
+  await supabase
+    .from('workout_plan_days')
+    .update({ weekday })
+    .eq('id', dayId)
+    .eq('workout_plan_id', planId);
+  revalidatePath(`/coach/workouts/plans/${planId}`);
 }
 
 export async function deleteWorkoutDay(dayId: string, planId: string): Promise<void> {

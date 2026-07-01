@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { WEEKDAYS, addDaysISO, monthGridISO, startOfWeekISO } from '@/domain/workouts/calendar';
 import { dayAdherence, type DayAdherence } from '@/domain/nutrition/adherence';
@@ -43,10 +44,13 @@ export function NutritionCalendar({
   byDate,
   target,
   todayISO,
+  hrefFor,
 }: {
   byDate: Record<string, NutritionDayTotals>;
   target: { calories: number | null };
   todayISO: string;
+  /** Si se provee, cada día es un enlace (navega) en vez de abrir el popover. */
+  hrefFor?: (dateISO: string) => string;
 }) {
   const [view, setView] = React.useState<'week' | 'month'>('week');
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekISO(todayISO));
@@ -142,6 +146,7 @@ export function NutritionCalendar({
               selected={selected === dateISO}
               showWeekdayLabel
               onSelect={setSelected}
+              href={hrefFor?.(dateISO)}
             />
           ))}
         </div>
@@ -164,6 +169,7 @@ export function NutritionCalendar({
                   compact
                   dimOtherMonth={Number(dateISO.slice(5, 7)) !== month.month}
                   onSelect={setSelected}
+                  href={hrefFor?.(dateISO)}
                 />
               ))}
             </div>
@@ -221,6 +227,7 @@ interface DayCellProps {
   compact?: boolean;
   dimOtherMonth?: boolean;
   onSelect: (dateISO: string) => void;
+  href?: string;
 }
 
 function DayCell({
@@ -232,29 +239,42 @@ function DayCell({
   compact,
   dimOtherMonth,
   onSelect,
+  href,
 }: DayCellProps) {
   const isToday = dateISO === todayISO;
   const dayNum = Number(dateISO.slice(8, 10));
 
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(dateISO)}
-      className={cn(
-        'flex w-full flex-col gap-1 rounded-lg border p-2 text-left transition-colors',
-        compact ? 'min-h-16' : 'min-h-24',
-        cellAccent(status),
-        selected && 'ring-2 ring-primary',
-        isToday && !selected && 'ring-1 ring-primary/50',
-        dimOtherMonth && 'opacity-30',
-      )}
-    >
+  const className = cn(
+    'flex w-full flex-col gap-1 rounded-lg border p-2 text-left transition-colors',
+    compact ? 'min-h-16' : 'min-h-24',
+    cellAccent(status),
+    selected && 'ring-2 ring-primary',
+    isToday && !selected && 'ring-1 ring-primary/50',
+    dimOtherMonth && 'opacity-30',
+  );
+
+  const inner = (
+    <>
       <div className="flex items-center justify-between">
         <span className={cn('text-xs font-medium', isToday ? 'text-primary' : 'text-faint')}>
           {showWeekdayLabel ? `${weekdayShort(dateISO)} ${dayNum}` : dayNum}
         </span>
       </div>
       <span className="text-xs font-medium leading-tight">{STATUS_LABEL[status]}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={className} scroll={false}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={() => onSelect(dateISO)} className={className}>
+      {inner}
     </button>
   );
 }

@@ -7,8 +7,19 @@ import { FoodLogForm } from '@/components/student/FoodLogForm';
 
 export const metadata = { title: 'Registrar comida' };
 
-export default async function NewMealPage() {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function NewMealPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
   const profile = await requireStudent();
+  const { date } = await searchParams;
+  const today = new Date().toISOString().slice(0, 10);
+  // Solo acepta fechas válidas y no futuras; por defecto hoy.
+  const initialDate = date && ISO_DATE.test(date) && date <= today ? date : today;
+
   const supabase = await createClient();
   const { data: foods } = await supabase
     .from('food_items')
@@ -23,7 +34,7 @@ export default async function NewMealPage() {
       </Link>
       <PageHeader title="Registrar comida" description="Busca alimentos y registra lo que comiste." />
       <Card className="p-6">
-        <FoodLogForm foodItems={foods ?? []} userId={profile.id} />
+        <FoodLogForm foodItems={foods ?? []} userId={profile.id} initialDate={initialDate} />
       </Card>
     </div>
   );

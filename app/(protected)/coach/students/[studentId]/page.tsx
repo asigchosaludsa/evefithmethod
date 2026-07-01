@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Dumbbell,
   LineChart,
-  Mail,
   MessageCircle,
   Ruler,
   Salad,
@@ -20,7 +19,6 @@ import { getStudentProgressDashboard } from '@/lib/db/queries/progress-dashboard
 import { getStudentRecentActivity } from '@/lib/db/queries/student-recent-activity';
 import { goalProgressPct, remainingToGoal } from '@/domain/progress/goals';
 import { createClient } from '@/lib/supabase/server';
-import { renderWhatsapp } from '@/lib/email/render';
 import { normalizeWhatsappNumber, isValidWhatsappNumber } from '@/lib/utils/whatsapp';
 import { todayISO, daysAgoISO } from '@/lib/utils/date';
 import {
@@ -75,7 +73,6 @@ export default async function StudentDetailPage({
   const sp = detail.studentProfile;
   const studentName = detail.profile.full_name ?? 'Alumna';
   const firstName = studentName.split(' ')[0] ?? studentName;
-  const email = detail.profile.email ?? null;
 
   // Contacto: teléfono + estado de cuenta (datos no incluidos en getStudentDetail).
   const supabase = await createClient();
@@ -87,11 +84,14 @@ export default async function StudentDetailPage({
   const phone = profileRow?.phone ?? '';
   const status = STATUS_META[profileRow?.status ?? ''] ?? null;
 
-  const wa = await renderWhatsapp('wa_welcome', { nombre: firstName, link: `${SITE}/login` });
-  const waHref =
-    wa && isValidWhatsappNumber(phone)
-      ? `https://wa.me/${normalizeWhatsappNumber(phone)}?text=${encodeURIComponent(wa.text)}`
-      : null;
+  // Mensaje de WhatsApp con enlace al portal (WhatsApp no adjunta el PDF; se
+  // envía el enlace a "Hoy", donde vive el plan actualizado de la alumna).
+  const waPlanMsg =
+    `Hola ${firstName} 👋 Tu plan en EveFit Method ya está actualizado. ` +
+    `Revísalo aquí: ${SITE}/student/today`;
+  const waHref = isValidWhatsappNumber(phone)
+    ? `https://wa.me/${normalizeWhatsappNumber(phone)}?text=${encodeURIComponent(waPlanMsg)}`
+    : null;
 
   // --- Datos "de un vistazo" (reusan getStudentProgressDashboard) ---
   const { weight, training, nutrition, measurements } = dashboard;
@@ -150,14 +150,7 @@ export default async function StudentDetailPage({
               {waHref && (
                 <Button asChild variant="outline" size="sm">
                   <a href={waHref} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="size-4" /> WhatsApp
-                  </a>
-                </Button>
-              )}
-              {email && (
-                <Button asChild variant="outline" size="sm">
-                  <a href={`mailto:${email}`}>
-                    <Mail className="size-4" /> Correo
+                    <MessageCircle className="size-4" /> Enviar plan por WhatsApp
                   </a>
                 </Button>
               )}

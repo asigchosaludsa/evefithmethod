@@ -10,6 +10,7 @@ import { toGrams } from '@/domain/nutrition/units';
 import { workoutLogSchema } from '@/domain/workouts/schemas';
 import { weightEntrySchema, bodyMeasurementSchema } from '@/domain/progress/schemas';
 import { upsertWorkoutSession } from '@/lib/workouts/log-session';
+import { todayISO } from '@/lib/utils/date';
 import type { ActionState } from '@/lib/auth/action-state';
 import type { MealType } from '@/types/app';
 
@@ -17,10 +18,30 @@ function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? 'Revisa los datos ingresados.';
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Resuelve el `logged_at` de una comida a partir de una fecha opcional
+ * YYYY-MM-DD elegida por la alumna. Sin fecha → ahora. Con fecha se ancla a
+ * mediodía UTC para que caiga dentro del día seleccionado sin importar la zona
+ * horaria al hacer los filtros de rango por día. Devuelve error si la fecha es
+ * inválida o futura.
+ */
+function resolveLoggedAt(loggedDate?: string | null): { at: string } | { error: string } {
+  if (!loggedDate) return { at: new Date().toISOString() };
+  if (!ISO_DATE.test(loggedDate)) return { error: 'Fecha inválida.' };
+  if (loggedDate > todayISO()) return { error: 'No puedes registrar comidas en fechas futuras.' };
+  const at = new Date(`${loggedDate}T12:00:00.000Z`);
+  if (Number.isNaN(at.getTime())) return { error: 'Fecha inválida.' };
+  return { at: at.toISOString() };
+}
+
 export interface LogFoodInput {
   mealType: MealType;
   notes?: string;
   photoPath?: string | null;
+  /** Día de la comida (YYYY-MM-DD). Ausente = hoy. */
+  loggedDate?: string;
   items: { foodItemId: string; unit: 'g' | 'ml' | 'unit'; quantity: number }[];
 }
 
@@ -112,6 +133,9 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
   });
   if ('error' in built) return { error: built.error };
 
+  const resolved = resolveLoggedAt(input.loggedDate);
+  if ('error' in resolved) return { error: resolved.error };
+
   const coachId = await getStudentCoachId(student.id);
   const { data: log, error: logErr } = await supabase
     .from('food_logs')
@@ -119,7 +143,7 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
       student_id: student.id,
       coach_id: coachId,
       meal_type: input.mealType,
-      logged_at: new Date().toISOString(),
+      logged_at: resolved.at,
       notes: input.notes ?? null,
       photo_path: input.photoPath ?? null,
     })
@@ -141,6 +165,8 @@ export async function logFood(input: LogFoodInput): Promise<{ error?: string; su
 export interface UpdateFoodLogInput {
   mealType: MealType;
   notes?: string;
+  /** Día de la comida (YYYY-MM-DD). Ausente = no cambia la fecha. */
+  loggedDate?: string;
   items: { foodItemId: string; unit: 'g' | 'ml' | 'unit'; quantity: number }[];
 }
 
@@ -168,9 +194,19 @@ export async function updateFoodLog(
   });
   if ('error' in built) return { error: built.error };
 
+  const updatePayload: { meal_type: MealType; notes: string | null; logged_at?: string } = {
+    meal_type: input.mealType,
+    notes: input.notes ?? null,
+  };
+  if (input.loggedDate) {
+    const resolved = resolveLoggedAt(input.loggedDate);
+    if ('error' in resolved) return { error: resolved.error };
+    updatePayload.logged_at = resolved.at;
+  }
+
   const { error: updErr } = await supabase
     .from('food_logs')
-    .update({ meal_type: input.mealType, notes: input.notes ?? null })
+    .update(updatePayload)
     .eq('id', logId)
     .eq('student_id', student.id);
   if (updErr) return { error: updErr.message };

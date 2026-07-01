@@ -57,6 +57,21 @@ export interface InitialLine {
   quantity: number;
 }
 
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Etiqueta humana del día: "hoy", "ayer" o "lunes 30 de junio". */
+function humanDay(iso: string): string {
+  const today = todayStr();
+  const d = new Date(`${iso}T12:00:00`);
+  if (iso === today) return 'hoy';
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === yesterday.toISOString().slice(0, 10)) return 'ayer';
+  return d.toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
 export function FoodLogForm({
   foodItems,
   userId,
@@ -64,6 +79,7 @@ export function FoodLogForm({
   initialMealType,
   initialNotes,
   initialLines,
+  initialDate,
 }: {
   foodItems: FoodOption[];
   userId: string;
@@ -72,10 +88,13 @@ export function FoodLogForm({
   initialMealType?: MealType;
   initialNotes?: string;
   initialLines?: InitialLine[];
+  /** Día preseleccionado (YYYY-MM-DD) para el registro. Ausente = hoy. */
+  initialDate?: string;
 }) {
   const router = useRouter();
   const isEdit = !!editLogId;
   const [mealType, setMealType] = useState<MealType>(initialMealType ?? 'breakfast');
+  const [loggedDate, setLoggedDate] = useState<string>(initialDate ?? todayStr());
   const [notes, setNotes] = useState(initialNotes ?? '');
   const [lines, setLines] = useState<Line[]>(
     initialLines?.map((l) => ({ foodItemId: l.foodItemId, name: l.name, quantity: l.quantity, unit: l.unit })) ?? [],
@@ -217,27 +236,45 @@ export function FoodLogForm({
     startTransition(async () => {
       const items = lines.map((l) => ({ foodItemId: l.foodItemId, unit: l.unit, quantity: l.quantity }));
       const res = isEdit
-        ? await updateFoodLog(editLogId, { mealType, notes: notes || undefined, items })
-        : await logFood({ mealType, notes: notes || undefined, photoPath, items });
+        ? await updateFoodLog(editLogId, { mealType, notes: notes || undefined, loggedDate, items })
+        : await logFood({ mealType, notes: notes || undefined, photoPath, loggedDate, items });
       if (res.error) {
         setError(res.error);
         return;
       }
-      router.push(isEdit ? '/student/meals' : '/student/today');
+      // Tras guardar, ir a la vista del día registrado (donde puede ver/editar/borrar).
+      router.push(`/student/meals?date=${loggedDate}`);
+      router.refresh();
     });
   }
 
   return (
     <div className="space-y-5">
-      <FormField label="Tipo de comida" htmlFor="meal_type">
-        <Select id="meal_type" value={mealType} onChange={(e) => setMealType(e.target.value as MealType)}>
-          {MEAL_OPTIONS.map((m) => (
-            <option key={m.value} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </Select>
-      </FormField>
+      <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+        Registro de comida del <span className="font-semibold capitalize">{humanDay(loggedDate)}</span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField label="Tipo de comida" htmlFor="meal_type">
+          <Select id="meal_type" value={mealType} onChange={(e) => setMealType(e.target.value as MealType)}>
+            {MEAL_OPTIONS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+
+        <FormField label="Día" htmlFor="logged_date" hint="Puedes registrar comidas de días pasados.">
+          <Input
+            id="logged_date"
+            type="date"
+            value={loggedDate}
+            max={todayStr()}
+            onChange={(e) => setLoggedDate(e.target.value || todayStr())}
+          />
+        </FormField>
+      </div>
 
       <FormField label="Buscar alimento" hint="Busca en tus alimentos y en la base mundial (Open Food Facts).">
         <div className="relative">

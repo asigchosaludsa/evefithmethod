@@ -74,8 +74,11 @@ export function WorkoutPlanForm({ studentId }: { studentId: string }) {
 
       {splitDays.length > 0 && (
         <div className="space-y-3 rounded-lg border border-border bg-surface/50 p-3">
-          <p className="text-sm font-medium text-foreground">Día de la semana por sesión</p>
-          <p className="text-xs text-muted">Los días sin sesión asignada son descanso.</p>
+          <p className="text-sm font-medium text-foreground">¿Qué día de la semana toca cada sesión?</p>
+          <p className="text-xs text-muted">
+            Asigna cada sesión a un día. Los días que no asignes quedan como descanso. Ej: Push→Lunes,
+            Pull→Miércoles, Legs→Viernes (descanso Mar, Jue, Sáb, Dom).
+          </p>
           <div className="space-y-2">
             {splitDays.map((day, i) => (
               <FormField
@@ -88,6 +91,7 @@ export function WorkoutPlanForm({ studentId }: { studentId: string }) {
                   name={`weekday_${day.day_number}`}
                   defaultValue={String(defaultWeekdayFor(i, splitDays.length))}
                 >
+                  <option value="">— Descanso / sin asignar —</option>
                   {WEEKDAYS.map((wd) => (
                     <option key={wd.value} value={wd.value}>
                       {wd.label}
