@@ -111,7 +111,7 @@ export default async function StudentNutritionPage({
             byDate={range.byDate}
             target={{ calories: range.target.calories }}
             todayISO={endISO}
-            hrefFor={(iso) => `/coach/students/${studentId}/nutrition?date=${iso}`}
+            hrefBase={`/coach/students/${studentId}/nutrition`}
           />
           <NutritionAdherenceChart points={points} target={range.target.calories} />
         </CardBody>

@@ -44,13 +44,17 @@ export function NutritionCalendar({
   byDate,
   target,
   todayISO,
-  hrefFor,
+  hrefBase,
 }: {
   byDate: Record<string, NutritionDayTotals>;
   target: { calories: number | null };
   todayISO: string;
-  /** Si se provee, cada día es un enlace (navega) en vez de abrir el popover. */
-  hrefFor?: (dateISO: string) => string;
+  /**
+   * Si se provee (ruta base serializable, ej. "/coach/.../nutrition"), cada día
+   * es un enlace `${hrefBase}?date=YYYY-MM-DD` en vez de abrir el popover.
+   * Debe ser un string (no una función) para cruzar el límite Servidor→Cliente.
+   */
+  hrefBase?: string;
 }) {
   const [view, setView] = React.useState<'week' | 'month'>('week');
   const [weekStart, setWeekStart] = React.useState(() => startOfWeekISO(todayISO));
@@ -146,7 +150,7 @@ export function NutritionCalendar({
               selected={selected === dateISO}
               showWeekdayLabel
               onSelect={setSelected}
-              href={hrefFor?.(dateISO)}
+              href={hrefBase ? `${hrefBase}?date=${dateISO}` : undefined}
             />
           ))}
         </div>
@@ -169,7 +173,7 @@ export function NutritionCalendar({
                   compact
                   dimOtherMonth={Number(dateISO.slice(5, 7)) !== month.month}
                   onSelect={setSelected}
-                  href={hrefFor?.(dateISO)}
+                  href={hrefBase ? `${hrefBase}?date=${dateISO}` : undefined}
                 />
               ))}
             </div>
