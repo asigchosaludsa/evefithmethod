@@ -23,7 +23,7 @@ export default async function EditMealPage({ params }: { params: Promise<{ logId
   const supabase = await createClient();
   const { data: foods } = await supabase
     .from('food_items')
-    .select('id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, grams_per_unit, unit_label')
+    .select('id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, grams_per_unit, unit_label, source, created_by')
     .or(`is_public.eq.true,created_by.eq.${profile.id}`)
     .order('name');
 
@@ -41,6 +41,8 @@ export default async function EditMealPage({ params }: { params: Promise<{ logId
         fat_per_100g: l.fat_per_100g,
         grams_per_unit: l.grams_per_unit,
         unit_label: l.unit_label,
+        source: 'other',
+        created_by: null,
       });
       present.add(l.foodItemId);
     }

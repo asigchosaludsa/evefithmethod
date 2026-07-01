@@ -7,7 +7,7 @@ import { NutritionPlanForm } from '@/components/coach/NutritionPlanForm';
 import { FoodLogReviewList } from '@/components/coach/FoodLogReviewList';
 import { MacroLegend } from '@/components/nutrition/MacroLine';
 import { ArchivePlanButton } from '@/components/coach/ArchivePlanButton';
-import { getStudentNutritionDay, getStudentNutritionRange } from '@/lib/db/queries/student-nutrition';
+import { getStudentMealsForDay, getStudentNutritionRange } from '@/lib/db/queries/student-nutrition';
 import { calculateMacroProgress } from '@/domain/nutrition/calculations';
 import { formatDate, todayISO } from '@/lib/utils/date';
 import { NutritionCalendar } from '@/components/nutrition/NutritionCalendar';
@@ -47,7 +47,7 @@ export default async function StudentNutritionPage({
   const supabase = await createClient();
   const [{ data: plans }, day] = await Promise.all([
     supabase.from('nutrition_plans').select('*').eq('student_id', studentId).order('created_at', { ascending: false }),
-    getStudentNutritionDay(studentId, selectedISO),
+    getStudentMealsForDay(studentId, selectedISO),
   ]);
   const calProgress = calculateMacroProgress(day.consumed.calories, day.target.calories ?? 0);
   const activePlans = (plans ?? []).filter((p) => p.status !== 'archived');

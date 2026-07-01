@@ -23,7 +23,7 @@ export default async function NewMealPage({
   const supabase = await createClient();
   const { data: foods } = await supabase
     .from('food_items')
-    .select('id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, grams_per_unit, unit_label')
+    .select('id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, grams_per_unit, unit_label, source, created_by')
     .or(`is_public.eq.true,created_by.eq.${profile.id}`)
     .order('name');
 

@@ -28,9 +28,10 @@ export interface OffProduct {
 }
 
 const OFF_SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
+const OFF_PRODUCT_URL = 'https://world.openfoodfacts.org/api/v2/product';
 const FIELDS = 'code,product_name,product_name_es,brands,nutriments';
 const TIMEOUT_MS = 5000;
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 24;
 
 /** Redondea a 1 decimal, tolerando ruido de coma flotante. */
 function round1(n: number): number {
@@ -102,6 +103,8 @@ export async function searchOpenFoodFacts(query: string): Promise<OffProduct[]> 
     action: 'process',
     json: '1',
     page_size: String(PAGE_SIZE),
+    // Prioriza productos populares (más escaneados) → resultados más útiles.
+    sort_by: 'popularity_key',
     lc: 'es',
     fields: FIELDS,
   });
@@ -225,4 +228,51 @@ export async function importOpenFoodFactsItem(
 
   revalidatePath('/student/meals/new');
   return { food: data };
+}
+
+/** Normaliza un código de barras a dígitos (EAN/UPC: 8–14 dígitos). */
+function cleanBarcode(code: string): string {
+  return (code || '').replace(/\D/g, '');
+}
+
+/**
+ * Busca un producto por código de barras en Open Food Facts (endpoint v2).
+ * Devuelve el producto mapeado, o un error suave si no existe / OFF falla.
+ */
+export async function lookupOpenFoodFactsBarcode(
+  code: string,
+): Promise<{ product?: OffProduct; error?: string }> {
+  await requireStudent();
+
+  const barcode = cleanBarcode(code);
+  if (barcode.length < 8 || barcode.length > 14) {
+    return { error: 'Código de barras inválido.' };
+  }
+
+  const params = new URLSearchParams({ fields: FIELDS, lc: 'es' });
+  const url = `${OFF_PRODUCT_URL}/${barcode}.json?${params.toString()}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'EveFitMethod/1.0 (https://evefitmethod.com)' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return { error: 'No pudimos consultar el código. Intenta de nuevo.' };
+    const json: unknown = await res.json();
+    const status = (json as { status?: unknown }).status;
+    const rawProduct = (json as { product?: unknown }).product;
+    if (status !== 1 || !rawProduct || typeof rawProduct !== 'object') {
+      return { error: 'Producto no encontrado. Puedes crearlo manualmente.' };
+    }
+    const mapped = mapProduct({ ...(rawProduct as OffRawProduct), code: barcode });
+    if (!mapped) return { error: 'El producto no tiene datos nutricionales utilizables.' };
+    return { product: mapped };
+  } catch {
+    return { error: 'No pudimos consultar el código de barras.' };
+  } finally {
+    clearTimeout(timer);
+  }
 }

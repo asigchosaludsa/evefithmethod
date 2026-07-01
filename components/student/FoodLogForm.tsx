@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, Globe, Loader2, Search, Trash2 } from 'lucide-react';
+import { Barcode, Camera, Check, Globe, Loader2, Pencil, Search, Trash2 } from 'lucide-react';
 import { logFood, updateFoodLog } from '@/lib/student/actions';
 import { createClient } from '@/lib/supabase/client';
 import { compressImage, uploadInfoFor } from '@/lib/utils/compress-image';
@@ -10,10 +10,12 @@ import { calculateFoodMacros, calculateMealTotals } from '@/domain/nutrition/cal
 import { toGrams, availableUnits, type FoodUnit } from '@/domain/nutrition/units';
 import { Button, FormField, Input, Select, Textarea } from '@/components/common';
 import { CreateFoodDialog } from '@/components/student/CreateFoodDialog';
+import { BarcodeScanner } from '@/components/student/BarcodeScanner';
 import { MacroLine, MacroLegend } from '@/components/nutrition/MacroLine';
 import {
   searchOpenFoodFacts,
   importOpenFoodFactsItem,
+  lookupOpenFoodFactsBarcode,
   type OffProduct,
 } from '@/lib/nutrition/openfoodfacts';
 import type { NewFood } from '@/lib/student/food-actions';
@@ -28,6 +30,8 @@ export interface FoodOption {
   fat_per_100g: number;
   grams_per_unit: number | null;
   unit_label: string | null;
+  source?: string | null;
+  created_by?: string | null;
 }
 
 interface Line {
@@ -111,6 +115,12 @@ export function FoodLogForm({
   const [offLoading, setOffLoading] = useState(false);
   const [importingCode, setImportingCode] = useState<string | null>(null);
   const offReqId = useRef(0);
+
+  // --- Edición de alimentos propios + escaneo de código de barras ---
+  const [editFood, setEditFood] = useState<FoodOption | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -211,6 +221,36 @@ export function FoodLogForm({
     addFood(food);
   }
 
+  // Un alimento propio se editó: actualiza el catálogo y los nombres en las líneas.
+  function handleEdited(food: NewFood) {
+    setFoods((fs) => fs.map((f) => (f.id === food.id ? { ...f, ...food } : f)));
+    setLines((ls) => ls.map((l) => (l.foodItemId === food.id ? { ...l, name: food.name } : l)));
+    setEditFood(null);
+  }
+
+  // Resuelve un código de barras vía Open Food Facts y lo agrega como línea.
+  function handleBarcode(code: string) {
+    if (scanBusy) return;
+    setScanError(null);
+    setScanBusy(true);
+    startTransition(async () => {
+      const lookup = await lookupOpenFoodFactsBarcode(code);
+      if (lookup.error || !lookup.product) {
+        setScanBusy(false);
+        setScanError(lookup.error ?? 'No se encontró el producto.');
+        return;
+      }
+      const res = await importOpenFoodFactsItem(lookup.product);
+      setScanBusy(false);
+      if (res.error || !res.food) {
+        setScanError(res.error ?? 'No se pudo agregar el producto.');
+        return;
+      }
+      handleCreated(res.food);
+      setScanOpen(false);
+    });
+  }
+
   // Importa un producto OFF como food_item y lo agrega como línea.
   function pickOffProduct(product: OffProduct) {
     if (importingCode) return;
@@ -295,18 +335,32 @@ export function FoodLogForm({
                   <li className="px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-faint">
                     Tus alimentos
                   </li>
-                  {matches.map((f) => (
-                    <li key={f.id}>
-                      <button
-                        type="button"
-                        onClick={() => addFood(f)}
-                        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface"
-                      >
-                        <span className="text-foreground">{f.name}</span>
-                        <span className="tabular text-xs text-faint">{f.calories_per_100g} kcal/100g</span>
-                      </button>
-                    </li>
-                  ))}
+                  {matches.map((f) => {
+                    const editable = f.source === 'custom' && f.created_by === userId;
+                    return (
+                      <li key={f.id} className="flex items-center hover:bg-surface">
+                        <button
+                          type="button"
+                          onClick={() => addFood(f)}
+                          className="flex min-w-0 flex-1 items-center justify-between px-3 py-2 text-left text-sm"
+                        >
+                          <span className="truncate text-foreground">{f.name}</span>
+                          <span className="tabular ml-2 shrink-0 text-xs text-faint">{f.calories_per_100g} kcal/100g</span>
+                        </button>
+                        {editable && (
+                          <button
+                            type="button"
+                            onClick={() => setEditFood(f)}
+                            className="shrink-0 px-2.5 py-2 text-faint hover:text-primary"
+                            aria-label={`Editar ${f.name}`}
+                            title="Editar alimento"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
 
@@ -344,10 +398,30 @@ export function FoodLogForm({
             </div>
           )}
         </div>
-        <div className="mt-2 flex justify-end">
-          <CreateFoodDialog onCreated={handleCreated} />
+        <div className="mt-2 flex items-center justify-end gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setScanError(null); setScanOpen(true); }}>
+            <Barcode className="size-4" /> Escanear código
+          </Button>
+          <CreateFoodDialog onSaved={handleCreated} />
         </div>
       </FormField>
+
+      {/* Diálogo de edición de un alimento propio (controlado). */}
+      <CreateFoodDialog
+        food={editFood ?? undefined}
+        open={editFood !== null}
+        onOpenChange={(o) => { if (!o) setEditFood(null); }}
+        onSaved={handleEdited}
+      />
+
+      {/* Escáner de código de barras. */}
+      <BarcodeScanner
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        onDetected={handleBarcode}
+        busy={scanBusy}
+        error={scanError}
+      />
 
       {lines.length > 0 && (
         <ul className="space-y-2">
